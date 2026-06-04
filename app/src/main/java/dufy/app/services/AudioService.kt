@@ -21,6 +21,7 @@ class AudioService : Service() {
     private var isMuted = false
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private lateinit var audioManager: AudioManager
+    private lateinit var localPlayer: dufy.app.player.LocalPlayer
 
     private val spotifyReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -55,6 +56,7 @@ class AudioService : Service() {
     override fun onCreate() {
         super.onCreate()
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        localPlayer = dufy.app.player.LocalPlayer(this)
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification("Dufy activo"))
         registerSpotifyReceiver()
@@ -76,6 +78,12 @@ class AudioService : Service() {
             0
         )
         isMuted = true
+
+        val songs = listOf("musica_sin_copyright", "musica_sin_copyright_2", "musica_sin_copyright_3")
+        val randomSong = songs.random()
+        val uri = android.net.Uri.parse("android.resource://${packageName}/raw/$randomSong")
+        localPlayer.play(uri)
+        Log.d("Dufy", "🎵 Reproduciendo: $randomSong")
     }
 
     private fun unmute() {
@@ -85,6 +93,7 @@ class AudioService : Service() {
             0
         )
         isMuted = false
+        localPlayer.stop()
         Log.d("Dufy", "🟢 Desilenciando — nueva canción")
     }
 
