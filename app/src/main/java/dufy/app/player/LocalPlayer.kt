@@ -2,7 +2,11 @@ package dufy.app.player
 
 import android.content.Context
 import android.net.Uri
+import androidx.compose.runtime.mutableStateOf
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import android.util.Log
 
@@ -10,20 +14,53 @@ class LocalPlayer(private val context: Context) {
 
     private var player: ExoPlayer? = null
 
-    fun play(uri: Uri) {
-        stop()
-        player = ExoPlayer.Builder(context).build().also {
-            it.setMediaItem(MediaItem.fromUri(uri))
-            it.prepare()
-            it.play()
-            Log.d("Dufy", "🎵 Reproduciendo audio local: $uri")
+    var onSongEnded: (() -> Unit)? = null
+    val currentPosition = mutableStateOf(0L)
+    val duration = mutableStateOf(0L)
+
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val progressRunnable = object : Runnable {
+        override fun run() {
+            player?.let {
+                currentPosition.value = it.currentPosition
+                duration.value = it.duration.coerceAtLeast(0)
+            }
+            handler.postDelayed(this, 500)
         }
     }
 
+    fun play(uri: Uri, volume: Float) {
+        stop()
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(C.USAGE_ALARM)
+            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+            .build()
+
+        player = ExoPlayer.Builder(context).build().also {
+            it.setAudioAttributes(audioAttributes, false)
+            it.volume = volume
+            it.setMediaItem(MediaItem.fromUri(uri))
+            it.prepare()
+            it.play()
+            it.addListener(object : Player.Listener {
+                override fun onPlaybackStateChanged(state: Int) {
+                    if (state == Player.STATE_ENDED) {
+                        onSongEnded?.invoke()
+                    }
+                }
+            })
+            Log.d("Dufy", "🎵 Reproduciendo audio local: $uri")
+        }
+        handler.post(progressRunnable)
+    }
+
     fun stop() {
+        handler.removeCallbacks(progressRunnable)
         player?.stop()
         player?.release()
         player = null
+        currentPosition.value = 0L
+        duration.value = 0L
         Log.d("Dufy", "⏹ Audio local detenido")
     }
 

@@ -10,8 +10,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager
 import android.os.IBinder
+import android.provider.MediaStore
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import java.io.File
 
 class AudioService : Service() {
 
@@ -19,6 +21,8 @@ class AudioService : Service() {
     private val NOTIFICATION_ID = 1
 
     private var isMuted = false
+    private var previousVolume: Int = 0
+    private var waitingForLocalSongToEnd = false
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private lateinit var audioManager: AudioManager
     private lateinit var localPlayer: dufy.app.player.LocalPlayer
@@ -33,10 +37,18 @@ class AudioService : Service() {
             if (!playing) return
 
             if (id.startsWith("spotify:track:")) {
-                // Nueva canción — desilenciar siempre
-                if (isMuted) unmute()
+                if (isMuted) {
+                    // Spotify intenta reanudar, pero puede que tu canción siga sonando
+                    if (localPlayer.isPlaying()) {
+                        Log.d("Dufy", "⏸ Tu canción sigue sonando — pausando Spotify de nuevo")
+                        pauseSpotify()
+                        waitingForLocalSongToEnd = true
+                        return
+                    } else {
+                        unmute()
+                    }
+                }
 
-                // Programar silencio al acabar la canción
                 handler.removeCallbacksAndMessages(null)
                 val timeLeft = (length - position).toLong()
                 Log.d("Dufy", "🟢 Canción | Tiempo restante: ${timeLeft}ms")
@@ -44,9 +56,7 @@ class AudioService : Service() {
                     Log.d("Dufy", "🔴 Silenciando — posible anuncio")
                     mute()
                 }, timeLeft)
-            }
-            // Si es anuncio confirmado, simplemente silenciar y no hacer nada más
-            else if (id.startsWith("spotify:ad:") || id.isEmpty()) {
+            } else if (id.startsWith("spotify:ad:") || id.isEmpty()) {
                 Log.d("Dufy", "🔴 Anuncio — manteniendo silencio")
                 if (!isMuted) mute()
             }
@@ -57,6 +67,30 @@ class AudioService : Service() {
         super.onCreate()
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         localPlayer = dufy.app.player.LocalPlayer(this)
+        dufy.app.state.PlayerState.loadSelectedFolder(this)
+        dufy.app.state.PlayerState.localPlayerRef = localPlayer
+
+        localPlayer.onSongEnded = {
+            Log.d("Dufy", "🎵 Canción local terminada")
+            if (waitingForLocalSongToEnd) {
+                waitingForLocalSongToEnd = false
+                unmute()
+                playSpotify()
+            }
+        }
+
+        dufy.app.state.PlayerState.onPlayRequested = { file ->
+            val uri = android.net.Uri.fromFile(file)
+            localPlayer.play(uri, 1f)
+        }
+        dufy.app.state.PlayerState.onPlayRequestedWithVolume = { file, volume ->
+            val uri = android.net.Uri.fromFile(file)
+            localPlayer.play(uri, volume)
+        }
+        dufy.app.state.PlayerState.onPauseRequested = {
+            localPlayer.stop()
+        }
+
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification("Dufy activo"))
         registerSpotifyReceiver()
@@ -71,30 +105,105 @@ class AudioService : Service() {
 
     override fun onBind(intent: Intent): IBinder? = null
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        Log.d("Dufy", "🛑 App cerrada desde recientes — deteniendo todo")
+        handler.removeCallbacksAndMessages(null)
+        if (isMuted) unmute()
+        localPlayer.stop()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+    private fun sendMediaButton(keyCode: Int) {
+        val downIntent = Intent(Intent.ACTION_MEDIA_BUTTON)
+        downIntent.putExtra(
+            Intent.EXTRA_KEY_EVENT,
+            android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, keyCode)
+        )
+        downIntent.setPackage("com.spotify.music")
+        sendOrderedBroadcast(downIntent, null)
+
+        val upIntent = Intent(Intent.ACTION_MEDIA_BUTTON)
+        upIntent.putExtra(
+            Intent.EXTRA_KEY_EVENT,
+            android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, keyCode)
+        )
+        upIntent.setPackage("com.spotify.music")
+        sendOrderedBroadcast(upIntent, null)
+    }
+
+    private fun playSpotify() {
+        sendMediaButton(android.view.KeyEvent.KEYCODE_MEDIA_PLAY)
+        Log.d("Dufy", "▶ Comando PLAY enviado a Spotify")
+    }
+
+    private fun pauseSpotify() {
+        sendMediaButton(android.view.KeyEvent.KEYCODE_MEDIA_PAUSE)
+        Log.d("Dufy", "⏸ Comando PAUSE enviado a Spotify")
+    }
+
+    private fun loadSongsFromFolder(): List<File> {
+        val folder = dufy.app.state.PlayerState.selectedFolder.value
+        val songs = mutableListOf<File>()
+        val projection = arrayOf(MediaStore.Audio.Media.DATA)
+        val cursor = contentResolver.query(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            projection,
+            "${MediaStore.Audio.Media.IS_MUSIC} != 0",
+            null,
+            null
+        )
+        cursor?.use {
+            val pathCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+            while (it.moveToNext()) {
+                val path = it.getString(pathCol)
+                if (folder.isEmpty() || path.substringBeforeLast("/") == folder) {
+                    songs.add(File(path))
+                }
+            }
+        }
+        return songs
+    }
+
     private fun mute() {
-        audioManager.adjustStreamVolume(
-            AudioManager.STREAM_MUSIC,
-            AudioManager.ADJUST_MUTE,
+        isMuted = true
+        previousVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val relativeVolume = previousVolume.toFloat() / maxVolume.toFloat()
+
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0)
+        audioManager.setStreamVolume(
+            AudioManager.STREAM_ALARM,
+            (relativeVolume * audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)).toInt(),
             0
         )
-        isMuted = true
 
-        val songs = listOf("musica_sin_copyright", "musica_sin_copyright_2", "musica_sin_copyright_3")
-        val randomSong = songs.random()
-        val uri = android.net.Uri.parse("android.resource://${packageName}/raw/$randomSong")
-        localPlayer.play(uri)
-        Log.d("Dufy", "🎵 Reproduciendo: $randomSong")
+        if (dufy.app.state.PlayerState.playlist.isEmpty()) {
+            val songs = loadSongsFromFolder()
+            if (songs.isNotEmpty()) {
+                val randomIndex = songs.indices.random()
+                dufy.app.state.PlayerState.setPlaylist(songs, randomIndex)
+            }
+        }
+
+        if (dufy.app.state.PlayerState.playlist.isNotEmpty()) {
+            dufy.app.state.PlayerState.playCurrentWithVolume(relativeVolume)
+            Log.d("Dufy", "🎵 Reproduciendo playlist usuario | Volumen: $previousVolume")
+        } else {
+            val songs = listOf("musica_sin_copyright", "musica_sin_copyright_2", "musica_sin_copyright_3")
+            val randomSong = songs.random()
+            val uri = android.net.Uri.parse("android.resource://${packageName}/raw/$randomSong")
+            localPlayer.play(uri, relativeVolume)
+            Log.d("Dufy", "🎵 Reproduciendo fallback: $randomSong")
+        }
     }
 
     private fun unmute() {
-        audioManager.adjustStreamVolume(
-            AudioManager.STREAM_MUSIC,
-            AudioManager.ADJUST_UNMUTE,
-            0
-        )
         isMuted = false
         localPlayer.stop()
-        Log.d("Dufy", "🟢 Desilenciando — nueva canción")
+        dufy.app.state.PlayerState.isPlayingLocal.value = false
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, previousVolume, 0)
+        Log.d("Dufy", "🟢 Desilenciando | Volumen restaurado: $previousVolume")
     }
 
     private fun registerSpotifyReceiver() {
