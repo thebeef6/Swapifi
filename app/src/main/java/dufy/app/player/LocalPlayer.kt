@@ -50,6 +50,7 @@ class LocalPlayer(private val context: Context) {
                 }
             })
             Log.d("Dufy", "🎵 Reproduciendo audio local: $uri")
+            Log.d("Dufy", "🔊 Player volume: $volume | STREAM_ALARM actual: ${(context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager).getStreamVolume(android.media.AudioManager.STREAM_ALARM)}")
         }
         handler.post(progressRunnable)
     }

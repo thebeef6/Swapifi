@@ -22,7 +22,6 @@ class AudioService : Service() {
 
     private var isMuted = false
     private var previousVolume: Int = 0
-
     private var previousAlarmVolume: Int = 0
     private var waitingForLocalSongToEnd = false
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -40,7 +39,6 @@ class AudioService : Service() {
 
             if (id.startsWith("spotify:track:")) {
                 if (isMuted) {
-                    // Spotify intenta reanudar, pero puede que tu canción siga sonando
                     if (localPlayer.isPlaying()) {
                         Log.d("Dufy", "⏸ Tu canción sigue sonando — pausando Spotify de nuevo | Alarma actual: ${audioManager.getStreamVolume(AudioManager.STREAM_ALARM)}")
                         pauseSpotify()
@@ -56,6 +54,9 @@ class AudioService : Service() {
                 Log.d("Dufy", "🟢 Canción | Tiempo restante: ${timeLeft}ms")
                 handler.postDelayed({
                     Log.d("Dufy", "🔴 Silenciando — posible anuncio")
+                    previousVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                    previousAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
+                    Log.d("Dufy", "💾 Volumen guardado | Música: $previousVolume | Alarma: $previousAlarmVolume")
                     mute()
                 }, timeLeft)
             } else if (id.startsWith("spotify:ad:") || id.isEmpty()) {
@@ -73,11 +74,17 @@ class AudioService : Service() {
         dufy.app.state.PlayerState.localPlayerRef = localPlayer
 
         localPlayer.onSongEnded = {
-            Log.d("Dufy", "🎵 Canción local terminada")
+            Log.d("Dufy", "🎵 Canción local terminada | isMuted=$isMuted | waitingForLocalSongToEnd=$waitingForLocalSongToEnd | previousVolume=$previousVolume")
             if (waitingForLocalSongToEnd) {
                 waitingForLocalSongToEnd = false
-                unmute()
-                playSpotify()
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, previousVolume, 0)
+                audioManager.setStreamVolume(AudioManager.STREAM_ALARM, previousAlarmVolume, 0)
+                Log.d("Dufy", "🟢 Volumen restaurado | Música actual: ${audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)} | Alarma actual: ${audioManager.getStreamVolume(AudioManager.STREAM_ALARM)}")
+                isMuted = false
+                dufy.app.state.PlayerState.isPlayingLocal.value = false
+                handler.postDelayed({
+                    playSpotify()
+                }, 300)
             }
         }
 
@@ -105,8 +112,6 @@ class AudioService : Service() {
         unregisterReceiver(spotifyReceiver)
     }
 
-    override fun onBind(intent: Intent): IBinder? = null
-
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
         Log.d("Dufy", "🛑 App cerrada desde recientes — deteniendo todo")
@@ -116,6 +121,9 @@ class AudioService : Service() {
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
+
+    override fun onBind(intent: Intent): IBinder? = null
+
     private fun sendMediaButton(keyCode: Int) {
         val downIntent = Intent(Intent.ACTION_MEDIA_BUTTON)
         downIntent.putExtra(
@@ -169,21 +177,16 @@ class AudioService : Service() {
 
     private fun mute() {
         isMuted = true
-        previousVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-        previousAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val relativeVolume = previousVolume.toFloat() / maxVolume.toFloat()
 
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0)
-        val alarmVolumeBefore = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
         audioManager.setStreamVolume(
             AudioManager.STREAM_ALARM,
             (relativeVolume * audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)).toInt(),
             0
         )
-        val alarmVolumeAfter = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
-        Log.d("Dufy", "🔊 Alarma ANTES de mute: $alarmVolumeBefore | DESPUÉS de mute: $alarmVolumeAfter")
-        Log.d("Dufy", "📊 ANTES DE MUTEAR | Música: $previousVolume | Alarma: $previousAlarmVolume")
+        Log.d("Dufy", "📊 MUTEANDO | Música: $previousVolume | Alarma: $previousAlarmVolume | RelativeVolume: $relativeVolume")
 
         if (dufy.app.state.PlayerState.playlist.isEmpty()) {
             val songs = loadSongsFromFolder()
@@ -194,25 +197,27 @@ class AudioService : Service() {
         }
 
         if (dufy.app.state.PlayerState.playlist.isNotEmpty()) {
-            dufy.app.state.PlayerState.playCurrentWithVolume(relativeVolume)
-            Log.d("Dufy", "🎵 Reproduciendo playlist usuario | Volumen: $previousVolume")
+            val newIndex = (dufy.app.state.PlayerState.playlist.indices - dufy.app.state.PlayerState.currentIndex).random()
+            dufy.app.state.PlayerState.currentIndex = newIndex
+            dufy.app.state.PlayerState.playCurrentWithVolume(1f)
+            Log.d("Dufy", "🎵 Reproduciendo playlist usuario | Volumen guardado: $previousVolume")
         } else {
             val songs = listOf("musica_sin_copyright", "musica_sin_copyright_2", "musica_sin_copyright_3")
             val randomSong = songs.random()
             val uri = android.net.Uri.parse("android.resource://${packageName}/raw/$randomSong")
-            localPlayer.play(uri, relativeVolume)
+            localPlayer.play(uri, 1f)
             Log.d("Dufy", "🎵 Reproduciendo fallback: $randomSong")
         }
     }
 
     private fun unmute() {
+        if (!isMuted) return
         isMuted = false
         localPlayer.stop()
         dufy.app.state.PlayerState.isPlayingLocal.value = false
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, previousVolume, 0)
         audioManager.setStreamVolume(AudioManager.STREAM_ALARM, previousAlarmVolume, 0)
-        Log.d("Dufy", "📊 RESTAURANDO | Música: $previousVolume | Alarma: $previousAlarmVolume")
-        Log.d("Dufy", "🟢 Desilenciando | Volumen música restaurado: $previousVolume | Volumen alarma restaurado: $previousAlarmVolume")
+        Log.d("Dufy", "🟢 Desilenciando | Música: $previousVolume | Alarma: $previousAlarmVolume")
     }
 
     private fun registerSpotifyReceiver() {

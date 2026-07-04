@@ -28,7 +28,7 @@ class MainActivity : ComponentActivity() {
         }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // Pedir permiso de lectura de audio
+
         val permission = if (android.os.Build.VERSION.SDK_INT >= 33) {
             android.Manifest.permission.READ_MEDIA_AUDIO
         } else {
@@ -38,6 +38,9 @@ class MainActivity : ComponentActivity() {
         if (androidx.core.content.ContextCompat.checkSelfPermission(this, permission)
             != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             androidx.core.app.ActivityCompat.requestPermissions(this, arrayOf(permission), 100)
+        } else {
+            // Ya tiene permiso, exportar directamente
+            dufy.app.utils.RawMusicExporter.exportIfNeeded(this)
         }
         setContent {
             DufyTheme {
@@ -55,6 +58,7 @@ class MainActivity : ComponentActivity() {
         if (requestCode == 100 && grantResults.isNotEmpty() &&
             grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
             dufy.app.state.PlayerState.permissionGranted.value = true
+            dufy.app.utils.RawMusicExporter.exportIfNeeded(this)
         }
     }
 }
