@@ -1,14 +1,16 @@
 package dufy.app.ui
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import android.content.Intent
-import android.net.Uri
+import dufy.app.R
 
 @Composable
 fun BugReportPopup(onDismiss: () -> Unit) {
@@ -19,19 +21,19 @@ fun BugReportPopup(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Reportar un bug",
+                text = stringResource(R.string.bug_title),
                 fontWeight = FontWeight.Bold
             )
         },
         text = {
             Column {
-                Text("Describe el problema que has encontrado:")
+                Text(stringResource(R.string.bug_description))
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = bugText,
                     onValueChange = { bugText = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Ej: la música no se silencia al pasar de canción...") },
+                    placeholder = { Text(stringResource(R.string.bug_placeholder)) },
                     minLines = 4
                 )
             }
@@ -49,12 +51,12 @@ fun BugReportPopup(onDismiss: () -> Unit) {
                 },
                 enabled = bugText.isNotBlank()
             ) {
-                Text("Enviar")
+                Text(stringResource(R.string.send))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

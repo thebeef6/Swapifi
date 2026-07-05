@@ -5,6 +5,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import dufy.app.R
 
 @Composable
 fun ContactPopup(onDismiss: () -> Unit) {
@@ -12,13 +14,13 @@ fun ContactPopup(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Contacto",
+                text = stringResource(R.string.contact_title),
                 fontWeight = FontWeight.Bold
             )
         },
         text = {
             Column {
-                Text("¿Tienes alguna pregunta o sugerencia?")
+                Text(stringResource(R.string.contact_message))
                 Spacer(modifier = androidx.compose.ui.Modifier.height(12.dp))
                 Text(
                     text = "tuemail@ejemplo.com",
@@ -28,7 +30,7 @@ fun ContactPopup(onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cerrar")
+                Text(stringResource(R.string.close))
             }
         }
     )

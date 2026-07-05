@@ -13,8 +13,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dufy.app.R
 import java.io.File
 
 data class AudioFile(val file: File, val title: String)
@@ -55,7 +57,6 @@ fun FileExplorerSection() {
 
     LaunchedEffect(permissionGranted, selectedFolder) {
         songs = getAudioFiles(context, selectedFolder)
-        android.util.Log.d("Dufy", "Canciones encontradas: ${songs.size}")
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -66,7 +67,10 @@ fun FileExplorerSection() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = if (selectedFolder.isEmpty()) "Tu música" else selectedFolder.substringAfterLast("/"),
+                text = if (selectedFolder.isEmpty())
+                    stringResource(R.string.your_music)
+                else
+                    selectedFolder.substringAfterLast("/"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )

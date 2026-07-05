@@ -5,6 +5,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import dufy.app.R
 
 @Composable
 fun AboutPopup(onDismiss: () -> Unit) {
@@ -12,22 +14,22 @@ fun AboutPopup(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Acerca de Dufy",
+                text = stringResource(R.string.about_title),
                 fontWeight = FontWeight.Bold
             )
         },
         text = {
             Column {
-                Text("Dufy v1.0")
+                Text(stringResource(R.string.about_version))
                 Spacer(modifier = androidx.compose.ui.Modifier.height(12.dp))
-                Text("Dufy silencia los anuncios de Spotify y reproduce tu música local mientras tanto.")
+                Text(stringResource(R.string.about_description))
                 Spacer(modifier = androidx.compose.ui.Modifier.height(12.dp))
-                Text("Hecho con ❤️ de forma independiente.")
+                Text(stringResource(R.string.about_made_with))
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cerrar")
+                Text(stringResource(R.string.close))
             }
         }
     )

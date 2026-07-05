@@ -5,8 +5,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dufy.app.R
 
 @Composable
 fun SettingsPopup(onDismiss: () -> Unit) {
@@ -24,23 +26,23 @@ fun SettingsPopup(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Ajustes",
+                text = stringResource(R.string.settings_title),
                 fontWeight = FontWeight.Bold
             )
         },
         text = {
             Column {
-                Text("Carpeta de música", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.settings_music_folder), fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(currentFolder.ifEmpty { "Todas las carpetas" })
+                Text(currentFolder.ifEmpty { stringResource(R.string.settings_music_folder_default) })
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(onClick = { showFolderPicker = true }) {
-                    Text("Cambiar carpeta")
+                    Text(stringResource(R.string.settings_change_folder))
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                Text("Idioma", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.settings_language), fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row {
                     FilterChip(
@@ -65,7 +67,7 @@ fun SettingsPopup(onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cerrar")
+                Text(stringResource(R.string.close))
             }
         }
     )

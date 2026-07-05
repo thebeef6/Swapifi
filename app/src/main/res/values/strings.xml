@@ -1,3 +1,59 @@
 <resources>
     <string name="app_name">Dufy</string>
+
+    <!-- TopBar -->
+    <string name="menu_settings">Ajustes</string>
+    <string name="menu_report_bug">Reportar un bug</string>
+    <string name="menu_contact">Contacto</string>
+    <string name="menu_about">Acerca de</string>
+
+    <!-- Player -->
+    <string name="status_playing_spotify">Reproduciendo en Spotify</string>
+    <string name="status_ad_detected">Anuncio detectado — Reproduciendo en local</string>
+    <string name="status_spotify_paused">Spotify pausado</string>
+
+    <!-- File Explorer -->
+    <string name="your_music">Tu música</string>
+
+    <!-- Donate -->
+    <string name="donate_button">♡ Donar</string>
+    <string name="donate_title">Apoya a Dufy</string>
+    <string name="donate_message">Si te gusta la app, puedes invitarme a un café ☕</string>
+    <string name="close">Cerrar</string>
+
+    <!-- Help -->
+    <string name="help_title">Configura Dufy</string>
+    <string name="help_intro">Para que Dufy funcione correctamente, sigue estos pasos:</string>
+    <string name="help_step1">1. Concede el permiso de música y audio cuando se solicite</string>
+    <string name="help_step2">2. Desactiva la optimización de batería para Dufy en los ajustes del sistema</string>
+    <string name="help_step3">3. Mantén Dufy abierta en segundo plano mientras usas Spotify</string>
+    <string name="understood">Entendido</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_music_folder">Carpeta de música</string>
+    <string name="settings_music_folder_default">Todas las carpetas</string>
+    <string name="settings_change_folder">Cambiar carpeta</string>
+    <string name="settings_language">Idioma</string>
+
+    <!-- Bug Report -->
+    <string name="bug_title">Reportar un bug</string>
+    <string name="bug_description">Describe el problema que has encontrado:</string>
+    <string name="bug_placeholder">Ej: la música no se silencia al pasar de canción...</string>
+    <string name="send">Enviar</string>
+    <string name="cancel">Cancelar</string>
+
+    <!-- Contact -->
+    <string name="contact_title">Contacto</string>
+    <string name="contact_message">¿Tienes alguna pregunta o sugerencia?</string>
+
+    <!-- About -->
+    <string name="about_title">Acerca de Dufy</string>
+    <string name="about_version">Dufy v1.0</string>
+    <string name="about_description">Dufy silencia los anuncios de Spotify y reproduce tu música local mientras tanto.</string>
+    <string name="about_made_with">Hecho con ❤️ de forma independiente.</string>
+
+    <!-- Folder Picker -->
+    <string name="folder_picker_title">Elige una carpeta</string>
+    <string name="folder_picker_choose">Elegir esta carpeta</string>
 </resources>

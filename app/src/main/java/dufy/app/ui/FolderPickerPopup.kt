@@ -12,8 +12,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dufy.app.R
 import java.io.File
 
 @Composable
@@ -67,12 +69,12 @@ fun FolderPickerPopup(
         },
         confirmButton = {
             TextButton(onClick = { onFolderSelected(currentDir.path) }) {
-                Text("Elegir esta carpeta")
+                Text(stringResource(R.string.folder_picker_choose))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

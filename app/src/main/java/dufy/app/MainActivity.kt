@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dufy.app.services.AudioService
 import dufy.app.ui.DufyTopBar
@@ -39,9 +40,9 @@ class MainActivity : ComponentActivity() {
             != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             androidx.core.app.ActivityCompat.requestPermissions(this, arrayOf(permission), 100)
         } else {
-            // Ya tiene permiso, exportar directamente
             dufy.app.utils.RawMusicExporter.exportIfNeeded(this)
         }
+
         setContent {
             DufyTheme {
                 DufyScreen()
@@ -62,6 +63,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
 @Composable
 fun DufyScreen() {
     var showDonatePopup by remember { mutableStateOf(false) }
@@ -71,7 +73,7 @@ fun DufyScreen() {
     LaunchedEffect(Unit) {
         dufy.app.state.PlayerState.loadSelectedFolder(context)
     }
-    // Mostrar ayuda automáticamente la primera vez
+
     LaunchedEffect(Unit) {
         val prefs = context.getSharedPreferences("dufy_prefs", android.content.Context.MODE_PRIVATE)
         val firstLaunch = prefs.getBoolean("first_launch", true)
@@ -98,7 +100,7 @@ fun DufyScreen() {
                     .windowInsetsPadding(WindowInsets.navigationBars)
                     .padding(16.dp)
             ) {
-                Text("♡ Donar")
+                Text(stringResource(R.string.donate_button))
             }
         }
     ) { innerPadding ->
@@ -108,7 +110,7 @@ fun DufyScreen() {
                 .padding(innerPadding)
         ) {
             PlayerSection(
-                statusText = "Reproduciendo en local",
+                statusText = stringResource(R.string.status_playing_spotify),
                 songTitle = dufy.app.state.PlayerState.currentSongName.value,
                 songArtist = "",
                 isPlayingLocal = dufy.app.state.PlayerState.isPlayingLocal.value,
@@ -129,7 +131,7 @@ fun DufyScreen() {
     if (showDonatePopup) {
         dufy.app.ui.DonatePopup(
             onDismiss = { showDonatePopup = false },
-            onAmountSelected = { amount: Int ->
+            onAmountSelected = { _: Int ->
                 showDonatePopup = false
             }
         )
