@@ -17,7 +17,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.io.File
-
+import androidx.compose.ui.res.stringResource
+import swapify.app.R
 data class AudioFile(val file: File, val title: String)
 
 fun getAudioFiles(context: Context, folder: String): List<AudioFile> {
