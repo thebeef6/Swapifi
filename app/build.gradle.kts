@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "dufy.app"
+    namespace = "swapify.app"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -12,7 +12,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "dufy.app"
+        applicationId = "swapify.app"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
