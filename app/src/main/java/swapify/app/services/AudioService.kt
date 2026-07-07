@@ -60,6 +60,15 @@ class AudioService : Service() {
                 }
 
                 handler.removeCallbacksAndMessages(null)
+
+                // Estos broadcasts no están protegidos: cualquier app puede
+                // falsificar los extras. Sin esta validación, un length/position
+                // manipulado daría un timeLeft negativo y postDelayed ejecutaría
+                // mute() inmediatamente durante la reproducción normal.
+                if (length <= 0 || position < 0 || position > length) {
+                    Log.d("Swapify", "⚠ Extras inválidos (length=$length, position=$position) — mute no programado")
+                    return
+                }
                 val timeLeft = (length - position).toLong()
 
                 // Capturar B aquí, antes del delay
