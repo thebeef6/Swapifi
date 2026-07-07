@@ -38,7 +38,7 @@ fun DonatePopup(
                         onClick = {
                             val intent = Intent(
                                 Intent.ACTION_VIEW,
-                                Uri.parse("https://ko-fi.com/TUNOMBRE") // TODO: cambiar por URL real
+                                Uri.parse("https://ko-fi.com/davidig6")
                             )
                             context.startActivity(intent)
                             onDismiss()

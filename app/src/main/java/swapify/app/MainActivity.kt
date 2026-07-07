@@ -110,7 +110,10 @@ fun SwapifyScreen() {
                 .padding(innerPadding)
         ) {
             PlayerSection(
-                statusText = stringResource(R.string.status_playing_spotify),
+                statusText = if (swapify.app.state.PlayerState.isPlayingLocal.value)
+                    stringResource(R.string.status_ad_detected)
+                else
+                    stringResource(R.string.status_playing_spotify),
                 songTitle = swapify.app.state.PlayerState.currentSongName.value,
                 songArtist = "",
                 isPlayingLocal = swapify.app.state.PlayerState.isPlayingLocal.value,
@@ -118,7 +121,7 @@ fun SwapifyScreen() {
                     if (swapify.app.state.PlayerState.isPlayingLocal.value) {
                         swapify.app.state.PlayerState.pause()
                     } else {
-                        swapify.app.state.PlayerState.playCurrent()
+                        swapify.app.state.PlayerState.resume()
                     }
                 },
                 onNext = { swapify.app.state.PlayerState.next() },

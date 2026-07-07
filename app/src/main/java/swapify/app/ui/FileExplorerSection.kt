@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -76,18 +77,23 @@ fun FileExplorerSection() {
             )
         }
 
+        val selectionEnabled = !swapify.app.state.PlayerState.isSpotifyPlaying.value
+
         LazyColumn {
             items(songs) { song ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable(enabled = !swapify.app.state.PlayerState.isSpotifyPlaying.value) {
+                        .clickable(enabled = selectionEnabled) {
                             val playlist = songs.map { it.file }
                             val startIndex = songs.indexOf(song)
                             swapify.app.state.PlayerState.setPlaylist(playlist, startIndex)
-                            swapify.app.state.PlayerState.playCurrent()
+                            swapify.app.state.PlayerState.playCurrentWithVolume(
+                                swapify.app.state.PlayerState.localPlayerRef?.localVolume?.value ?: 1f
+                            )
                         }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                        .alpha(if (selectionEnabled) 1f else 0.4f),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(Icons.Default.MusicNote, contentDescription = null)

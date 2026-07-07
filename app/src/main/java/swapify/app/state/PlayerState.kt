@@ -15,6 +15,7 @@ object PlayerState {
     var onPlayRequested: ((File) -> Unit)? = null
     var onPlayRequestedWithVolume: ((File, Float) -> Unit)? = null
     var onPauseRequested: (() -> Unit)? = null
+    var onResumeRequested: (() -> Boolean)? = null
     var localPosition = androidx.compose.runtime.mutableStateOf(0L)
     var localDuration = androidx.compose.runtime.mutableStateOf(0L)
     var localPlayerRef: swapify.app.player.LocalPlayer? = null
@@ -56,6 +57,15 @@ object PlayerState {
     fun pause() {
         onPauseRequested?.invoke()
         isPlayingLocal.value = false
+    }
+
+    // Reanuda la canción pausada; si no había nada pausado, arranca la actual.
+    fun resume() {
+        if (onResumeRequested?.invoke() == true) {
+            isPlayingLocal.value = true
+        } else {
+            playCurrent()
+        }
     }
 
     fun next() {

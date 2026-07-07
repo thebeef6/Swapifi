@@ -42,7 +42,7 @@ fun BugReportPopup(onDismiss: () -> Unit) {
             TextButton(
                 onClick = {
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        data = Uri.parse("mailto:tuemail@ejemplo.com")
+                        data = Uri.parse("mailto:davidig.info@gmail.com")
                         putExtra(Intent.EXTRA_SUBJECT, "Reporte de bug - Swapify")
                         putExtra(Intent.EXTRA_TEXT, bugText)
                     }

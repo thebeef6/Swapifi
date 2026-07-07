@@ -35,6 +35,7 @@ fun PlayerSection(
     val position = player?.currentPosition?.value ?: 0L
     val duration = player?.duration?.value ?: 0L
     val timeLeft = if (duration > 0) duration - position else 0L
+    val controlsEnabled = !swapify.app.state.PlayerState.isSpotifyPlaying.value
 
     Column(
         modifier = Modifier
@@ -94,11 +95,12 @@ fun PlayerSection(
             horizontalArrangement = Arrangement.spacedBy(24.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onPrevious) {
+            IconButton(onClick = onPrevious, enabled = controlsEnabled) {
                 Icon(Icons.Default.SkipPrevious, contentDescription = "Anterior")
             }
             FilledIconButton(
                 onClick = onPlayPause,
+                enabled = controlsEnabled,
                 modifier = Modifier.size(56.dp)
             ) {
                 Icon(
@@ -106,7 +108,7 @@ fun PlayerSection(
                     contentDescription = if (isPlayingLocal) "Pausar" else "Play"
                 )
             }
-            IconButton(onClick = onNext) {
+            IconButton(onClick = onNext, enabled = controlsEnabled) {
                 Icon(Icons.Default.SkipNext, contentDescription = "Siguiente")
             }
         }

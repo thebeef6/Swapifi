@@ -16,6 +16,7 @@ import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import java.io.File
+import kotlin.math.roundToInt
 
 class AudioService : Service() {
 
@@ -28,6 +29,7 @@ class AudioService : Service() {
     private var originalAlarmVolume: Int = 0
     private var spotifyMusicVolume: Int = 0
     private var userAlarmVolumeWhileLocal: Int? = null
+    private var alarmIndexSetOnMute: Int = -1
 
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private lateinit var audioManager: AudioManager
@@ -44,9 +46,8 @@ class AudioService : Service() {
             if (!playing) return
 
             if (id.startsWith("spotify:track:")) {
-                swapify.app.state.PlayerState.isSpotifyPlaying.value = true
                 if (isMuted) {
-                    if (localPlayer.isPlaying()) {
+                    if (localPlayer.isActive()) {
                         Log.d("Swapify", "⏸ Tu canción sigue sonando — pausando Spotify de nuevo")
                         pauseSpotify()
                         waitingForLocalSongToEnd = true
@@ -54,6 +55,8 @@ class AudioService : Service() {
                     } else {
                         unmute()
                     }
+                } else {
+                    swapify.app.state.PlayerState.isSpotifyPlaying.value = true
                 }
 
                 handler.removeCallbacksAndMessages(null)
@@ -95,18 +98,11 @@ class AudioService : Service() {
             if (waitingForLocalSongToEnd) {
                 waitingForLocalSongToEnd = false
 
-                val maxAlarm = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
-                val maxMusic = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-
-                val newMusicVolume = userAlarmVolumeWhileLocal?.let { c ->
-                    ((c.toFloat() / maxAlarm.toFloat()) * maxMusic).toInt()
-                } ?: spotifyMusicVolume
-
-                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newMusicVolume, 0)
-                audioManager.setStreamVolume(AudioManager.STREAM_ALARM, originalAlarmVolume, 0)
-                userAlarmVolumeWhileLocal = null
-
-                Log.d("Swapify", "🟢 Restaurando | Música: $newMusicVolume | Alarma: $originalAlarmVolume")
+                // Libera el ExoPlayer y detiene su bucle de progreso; si se queda
+                // vivo tras STATE_ENDED seguiría sincronizando localVolume con el
+                // volumen de alarma ya restaurado.
+                localPlayer.stop()
+                restoreSpotifyVolumes()
                 isMuted = false
                 swapify.app.state.PlayerState.isPlayingLocal.value = false
                 handler.postDelayed({ playSpotify() }, 300)
@@ -124,7 +120,10 @@ class AudioService : Service() {
             localPlayer.play(uri, volume)
         }
         swapify.app.state.PlayerState.onPauseRequested = {
-            localPlayer.stop()
+            localPlayer.pause()
+        }
+        swapify.app.state.PlayerState.onResumeRequested = {
+            localPlayer.resume()
         }
 
         createNotificationChannel()
@@ -233,18 +232,16 @@ class AudioService : Service() {
         isMuting = true
         isMuted = true
         userAlarmVolumeWhileLocal = null
+        swapify.app.state.PlayerState.isSpotifyPlaying.value = false
 
         val maxMusic = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val maxAlarm = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
         val relativeVolume = spotifyMusicVolume.toFloat() / maxMusic.toFloat()
 
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0)
-        audioManager.setStreamVolume(
-            AudioManager.STREAM_ALARM,
-            (relativeVolume * maxAlarm).toInt(),
-            0
-        )
-        Log.d("Swapify", "🔴 Muteando | B: $spotifyMusicVolume | Alarma ajustada: ${(relativeVolume * maxAlarm).toInt()}")
+        alarmIndexSetOnMute = (relativeVolume * maxAlarm).roundToInt()
+        audioManager.setStreamVolume(AudioManager.STREAM_ALARM, alarmIndexSetOnMute, 0)
+        Log.d("Swapify", "🔴 Muteando | B: $spotifyMusicVolume | Alarma ajustada: $alarmIndexSetOnMute")
 
         if (swapify.app.state.PlayerState.playlist.isEmpty()) {
             val songs = loadSongsFromFolder()
@@ -255,15 +252,19 @@ class AudioService : Service() {
         }
 
         if (swapify.app.state.PlayerState.playlist.isNotEmpty()) {
-            val newIndex = (swapify.app.state.PlayerState.playlist.indices - swapify.app.state.PlayerState.currentIndex).random()
+            // Con una sola canción el rango queda vacío y .random() lanzaría
+            // NoSuchElementException, matando el servicio (y con él todo el
+            // silenciado de anuncios hasta reabrir la app).
+            val candidates = swapify.app.state.PlayerState.playlist.indices - swapify.app.state.PlayerState.currentIndex
+            val newIndex = if (candidates.isNotEmpty()) candidates.random() else swapify.app.state.PlayerState.currentIndex
             swapify.app.state.PlayerState.currentIndex = newIndex
-            swapify.app.state.PlayerState.playCurrentWithVolume(1f)
+            swapify.app.state.PlayerState.playCurrentWithVolume(relativeVolume)
             Log.d("Swapify", "🎵 Reproduciendo playlist usuario | B: $spotifyMusicVolume")
         } else {
             val songs = listOf("musica_sin_copyright", "musica_sin_copyright_2", "musica_sin_copyright_3")
             val randomSong = songs.random()
             val uri = android.net.Uri.parse("android.resource://${packageName}/raw/$randomSong")
-            localPlayer.play(uri, 1f)
+            localPlayer.play(uri, relativeVolume)
             Log.d("Swapify", "🎵 Reproduciendo fallback: $randomSong")
         }
 
@@ -276,20 +277,31 @@ class AudioService : Service() {
         localPlayer.stop()
         swapify.app.state.PlayerState.isPlayingLocal.value = false
 
+        restoreSpotifyVolumes()
+        swapify.app.state.PlayerState.isSpotifyPlaying.value = true
+
+    }
+
+    private fun restoreSpotifyVolumes() {
         val maxAlarm = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
         val maxMusic = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
 
-        val newMusicVolume = userAlarmVolumeWhileLocal?.let { c ->
-            ((c.toFloat() / maxAlarm.toFloat()) * maxMusic).toInt()
-        } ?: spotifyMusicVolume
+        // El ContentObserver también captura como C el ajuste de alarma que hace
+        // el propio mute(); si C no lo cambió el usuario, restauramos B tal cual.
+        // El ida-y-vuelta por la escala de alarma (menos pasos que la de música)
+        // truncaba el volumen de Spotify un poco más en cada ciclo de anuncio.
+        val c = userAlarmVolumeWhileLocal
+        val newMusicVolume = if (c != null && c != alarmIndexSetOnMute && maxAlarm > 0) {
+            ((c.toFloat() / maxAlarm.toFloat()) * maxMusic).roundToInt()
+        } else {
+            spotifyMusicVolume
+        }
 
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newMusicVolume, 0)
         audioManager.setStreamVolume(AudioManager.STREAM_ALARM, originalAlarmVolume, 0)
         userAlarmVolumeWhileLocal = null
 
-        Log.d("Swapify", "🟢 Desilenciando | Música: $newMusicVolume | Alarma: $originalAlarmVolume")
-        swapify.app.state.PlayerState.isSpotifyPlaying.value = true
-
+        Log.d("Swapify", "🟢 Restaurando | Música: $newMusicVolume | Alarma: $originalAlarmVolume")
     }
 
     private fun registerSpotifyReceiver() {

@@ -23,7 +23,7 @@ fun ContactPopup(onDismiss: () -> Unit) {
                 Text(stringResource(R.string.contact_message))
                 Spacer(modifier = androidx.compose.ui.Modifier.height(12.dp))
                 Text(
-                    text = "tuemail@ejemplo.com",
+                    text = "davidig.info@gmail.com",
                     fontWeight = FontWeight.Bold
                 )
             }
