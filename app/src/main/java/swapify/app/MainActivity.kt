@@ -66,9 +66,13 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun SwapifyScreen() {
-    var showDonatePopup by remember { mutableStateOf(false) }
     var showHelpPopup by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
+    val openKofi = {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://ko-fi.com/davidig6"))
+        )
+    }
 
     LaunchedEffect(Unit) {
         swapify.app.state.PlayerState.loadSelectedFolder(context)
@@ -88,13 +92,13 @@ fun SwapifyScreen() {
     Scaffold(
         topBar = {
             SwapifyTopBar(
-                onDonateClick = { showDonatePopup = true },
+                onDonateClick = openKofi,
                 onHelpClick = { showHelpPopup = true }
             )
         },
         bottomBar = {
             Button(
-                onClick = { showDonatePopup = true },
+                onClick = openKofi,
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.navigationBars)
@@ -129,15 +133,6 @@ fun SwapifyScreen() {
             )
             FileExplorerSection()
         }
-    }
-
-    if (showDonatePopup) {
-        swapify.app.ui.DonatePopup(
-            onDismiss = { showDonatePopup = false },
-            onAmountSelected = { _: Int ->
-                showDonatePopup = false
-            }
-        )
     }
 
     if (showHelpPopup) {

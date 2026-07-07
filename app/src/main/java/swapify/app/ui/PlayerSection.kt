@@ -10,9 +10,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import swapify.app.R
 
 fun formatTime(ms: Long): String {
     val totalSeconds = ms / 1000
@@ -96,7 +98,7 @@ fun PlayerSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onPrevious, enabled = controlsEnabled) {
-                Icon(Icons.Default.SkipPrevious, contentDescription = "Anterior")
+                Icon(Icons.Default.SkipPrevious, contentDescription = stringResource(R.string.player_previous))
             }
             FilledIconButton(
                 onClick = onPlayPause,
@@ -105,11 +107,13 @@ fun PlayerSection(
             ) {
                 Icon(
                     if (isPlayingLocal) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlayingLocal) "Pausar" else "Play"
+                    contentDescription = stringResource(
+                        if (isPlayingLocal) R.string.player_pause else R.string.player_play
+                    )
                 )
             }
             IconButton(onClick = onNext, enabled = controlsEnabled) {
-                Icon(Icons.Default.SkipNext, contentDescription = "Siguiente")
+                Icon(Icons.Default.SkipNext, contentDescription = stringResource(R.string.player_next))
             }
         }
     }

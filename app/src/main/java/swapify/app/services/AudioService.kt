@@ -136,7 +136,7 @@ class AudioService : Service() {
         }
 
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, buildNotification("Swapify activo"))
+        startForeground(NOTIFICATION_ID, buildNotification(getString(swapify.app.R.string.notification_active)))
         registerSpotifyReceiver()
     }
 

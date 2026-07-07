@@ -41,7 +41,7 @@ fun FolderPickerPopup(
                     IconButton(onClick = {
                         currentDir = currentDir.parentFile ?: rootDir
                     }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.folder_picker_back))
                     }
                 }
                 Text(

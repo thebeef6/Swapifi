@@ -16,6 +16,7 @@ import swapify.app.R
 fun BugReportPopup(onDismiss: () -> Unit) {
     var bugText by remember { mutableStateOf("") }
     val context = LocalContext.current
+    val emailSubject = stringResource(R.string.bug_email_subject)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -43,7 +44,7 @@ fun BugReportPopup(onDismiss: () -> Unit) {
                 onClick = {
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
                         data = Uri.parse("mailto:davidig.info@gmail.com")
-                        putExtra(Intent.EXTRA_SUBJECT, "Reporte de bug - Swapify")
+                        putExtra(Intent.EXTRA_SUBJECT, emailSubject)
                         putExtra(Intent.EXTRA_TEXT, bugText)
                     }
                     context.startActivity(intent)
