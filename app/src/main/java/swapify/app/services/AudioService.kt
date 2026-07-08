@@ -432,7 +432,7 @@ class AudioService : Service() {
             swapify.app.state.PlayerState.playCurrentWithVolume(relativeVolume)
             Log.d("Swapify", "🎵 Reproduciendo playlist usuario | B: $spotifyMusicVolume")
         } else {
-            val songs = listOf("musica_sin_copyright", "musica_sin_copyright_2", "musica_sin_copyright_3")
+            val songs = listOf("halfway_in", "never_coming_down", "two_things")
             val randomSong = songs.random()
             val uri = android.net.Uri.parse("android.resource://${packageName}/raw/$randomSong")
             localPlayer.play(uri, relativeVolume)
