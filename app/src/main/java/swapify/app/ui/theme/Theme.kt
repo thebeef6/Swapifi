@@ -8,35 +8,46 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = SwapifyRedBright,
+    onPrimary = Color.White,
+    primaryContainer = SwapifyRedDeep,
+    onPrimaryContainer = Color(0xFFFFD9DE),
+    secondary = SwapifySilver,
+    onSecondary = Color(0xFF2A2D31),
+    tertiary = SwapifyRed,
+    background = DarkBackground,
+    onBackground = Color(0xFFF2E7E9),
+    surface = DarkSurface,
+    onSurface = Color(0xFFF2E7E9),
+    surfaceVariant = DarkSurfaceVariant,
+    onSurfaceVariant = Color(0xFFD8C2C7)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
+    primary = SwapifyRed,
     onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    primaryContainer = Color(0xFFFFD9DE),
+    onPrimaryContainer = Color(0xFF40000D),
+    secondary = Color(0xFF75565C),
+    tertiary = SwapifyRedDeep,
+    background = LightBackground,
+    onBackground = Color(0xFF201A1B),
+    surface = LightSurface,
+    onSurface = Color(0xFF201A1B),
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = Color(0xFF514347)
 )
 
 @Composable
 fun SwapifyTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // Desactivado por defecto: el color dinámico de Android 12+ pisaría el
+    // rojo de marca del icono con los colores del fondo de pantalla del usuario.
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

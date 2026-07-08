@@ -3,13 +3,18 @@ package swapify.app.services
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.database.ContentObserver
+import android.graphics.drawable.Icon
 import android.media.AudioManager
+import android.media.MediaMetadata
+import android.media.session.MediaSession
+import android.media.session.PlaybackState
 import android.os.IBinder
 import android.provider.MediaStore
 import android.provider.Settings
@@ -22,6 +27,13 @@ class AudioService : Service() {
 
     private val CHANNEL_ID = "SwapifyChannel"
     private val NOTIFICATION_ID = 1
+
+    companion object {
+        private const val ACTION_PLAY = "swapify.app.action.PLAY"
+        private const val ACTION_PAUSE = "swapify.app.action.PAUSE"
+        private const val ACTION_NEXT = "swapify.app.action.NEXT"
+        private const val ACTION_PREVIOUS = "swapify.app.action.PREVIOUS"
+    }
 
     private var isMuted = false
     private var isMuting = false
@@ -54,6 +66,7 @@ class AudioService : Service() {
     private lateinit var audioManager: AudioManager
     private lateinit var localPlayer: swapify.app.player.LocalPlayer
     private lateinit var volumeObserver: ContentObserver
+    private lateinit var mediaSession: MediaSession
 
     private val spotifyReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -150,6 +163,7 @@ class AudioService : Service() {
         Log.d("Swapify", "📊 Inicial — A: $originalAlarmVolume | B: $spotifyMusicVolume")
 
         registerVolumeObserver()
+        createMediaSession()
 
         localPlayer.onSongEnded = {
             Log.d("Swapify", "🎵 Canción local terminada | C: $userAlarmVolumeWhileLocal")
@@ -167,21 +181,31 @@ class AudioService : Service() {
                 swapify.app.state.PlayerState.isSpotifyPlaying.value = true
 
             }
+            updateMediaNotification()
+        }
+
+        localPlayer.onReady = {
+            updateMediaNotification()
         }
 
         swapify.app.state.PlayerState.onPlayRequested = { file ->
             val uri = android.net.Uri.fromFile(file)
             localPlayer.play(uri, 1f)
+            updateMediaNotification()
         }
         swapify.app.state.PlayerState.onPlayRequestedWithVolume = { file, volume ->
             val uri = android.net.Uri.fromFile(file)
             localPlayer.play(uri, volume)
+            updateMediaNotification()
         }
         swapify.app.state.PlayerState.onPauseRequested = {
             localPlayer.pause()
+            updateMediaNotification()
         }
         swapify.app.state.PlayerState.onResumeRequested = {
-            localPlayer.resume()
+            val resumed = localPlayer.resume()
+            if (resumed) updateMediaNotification()
+            resumed
         }
 
         createNotificationChannel()
@@ -196,10 +220,24 @@ class AudioService : Service() {
         )
     }
 
+    // Los botones de la notificación (pre-Android 13) llegan como intents con
+    // acción; se enrutan por PlayerState para que la UI de la app quede en
+    // sincronía, igual que los botones en pantalla.
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            ACTION_PLAY -> swapify.app.state.PlayerState.resume()
+            ACTION_PAUSE -> swapify.app.state.PlayerState.pause()
+            ACTION_NEXT -> swapify.app.state.PlayerState.next()
+            ACTION_PREVIOUS -> swapify.app.state.PlayerState.previous()
+        }
+        return START_STICKY
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacksAndMessages(null)
         if (isMuted) unmute()
+        mediaSession.release()
         unregisterReceiver(spotifyReceiver)
         unregisterReceiver(volumeChangedReceiver)
         contentResolver.unregisterContentObserver(volumeObserver)
@@ -334,6 +372,9 @@ class AudioService : Service() {
             val uri = android.net.Uri.parse("android.resource://${packageName}/raw/$randomSong")
             localPlayer.play(uri, relativeVolume)
             Log.d("Swapify", "🎵 Reproduciendo fallback: $randomSong")
+            // La rama de playlist ya actualiza vía onPlayRequestedWithVolume;
+            // el fallback llama a localPlayer directamente y necesita esto.
+            updateMediaNotification()
         }
 
         isMuting = false
@@ -347,6 +388,7 @@ class AudioService : Service() {
 
         restoreSpotifyVolumes()
         swapify.app.state.PlayerState.isSpotifyPlaying.value = true
+        updateMediaNotification()
 
     }
 
@@ -400,6 +442,132 @@ class AudioService : Service() {
             .setContentTitle("Swapify")
             .setContentText(text)
             .setSmallIcon(android.R.drawable.ic_media_play)
+            .build()
+    }
+
+    // En Android 13+ el sistema ignora los Action de la notificación y pinta los
+    // botones a partir de las acciones declaradas en el PlaybackState de la
+    // sesión, así que ambos caminos (callback de sesión e intents de acción)
+    // tienen que existir y acabar en las mismas funciones de PlayerState.
+    private fun createMediaSession() {
+        mediaSession = MediaSession(this, "Swapify")
+        mediaSession.setCallback(object : MediaSession.Callback() {
+            override fun onPlay() {
+                swapify.app.state.PlayerState.resume()
+            }
+
+            override fun onPause() {
+                swapify.app.state.PlayerState.pause()
+            }
+
+            override fun onSkipToNext() {
+                swapify.app.state.PlayerState.next()
+            }
+
+            override fun onSkipToPrevious() {
+                swapify.app.state.PlayerState.previous()
+            }
+
+            override fun onSeekTo(pos: Long) {
+                localPlayer.seekTo(pos)
+                updateMediaNotification()
+            }
+        })
+    }
+
+    // Punto único de refresco: con música local cargada muestra el controlador
+    // multimedia (título, progreso, ⏮ ⏯ ⏭); sin ella vuelve a la notificación
+    // básica y desactiva la sesión para que el sistema retire los controles.
+    private fun updateMediaNotification() {
+        val manager = getSystemService(NotificationManager::class.java)
+
+        if (!localPlayer.hasMedia()) {
+            mediaSession.isActive = false
+            mediaSession.setPlaybackState(
+                PlaybackState.Builder()
+                    .setState(PlaybackState.STATE_STOPPED, 0L, 0f)
+                    .build()
+            )
+            manager.notify(NOTIFICATION_ID, buildNotification(getString(swapify.app.R.string.notification_active)))
+            return
+        }
+
+        val playing = localPlayer.isActive()
+        // La reproducción de fallback (raw) no pasa por PlayerState y deja el
+        // nombre vacío; mostramos el nombre de la app en su lugar.
+        val title = swapify.app.state.PlayerState.currentSongName.value
+            .ifEmpty { getString(swapify.app.R.string.app_name) }
+
+        mediaSession.setMetadata(
+            MediaMetadata.Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, title)
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, getString(swapify.app.R.string.notification_local_playing))
+                .putLong(MediaMetadata.METADATA_KEY_DURATION, localPlayer.durationMs())
+                .build()
+        )
+        mediaSession.setPlaybackState(
+            PlaybackState.Builder()
+                .setActions(
+                    PlaybackState.ACTION_PLAY or
+                        PlaybackState.ACTION_PAUSE or
+                        PlaybackState.ACTION_PLAY_PAUSE or
+                        PlaybackState.ACTION_SEEK_TO or
+                        PlaybackState.ACTION_SKIP_TO_NEXT or
+                        PlaybackState.ACTION_SKIP_TO_PREVIOUS
+                )
+                .setState(
+                    if (playing) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED,
+                    localPlayer.positionMs(),
+                    if (playing) 1f else 0f
+                )
+                .build()
+        )
+        mediaSession.isActive = true
+
+        manager.notify(NOTIFICATION_ID, buildMediaNotification(title, playing))
+    }
+
+    private fun servicePendingIntent(action: String, requestCode: Int): PendingIntent {
+        val intent = Intent(this, AudioService::class.java).setAction(action)
+        return PendingIntent.getService(this, requestCode, intent, PendingIntent.FLAG_IMMUTABLE)
+    }
+
+    private fun mediaAction(iconRes: Int, titleRes: Int, action: String, requestCode: Int): Notification.Action {
+        return Notification.Action.Builder(
+            Icon.createWithResource(this, iconRes),
+            getString(titleRes),
+            servicePendingIntent(action, requestCode)
+        ).build()
+    }
+
+    private fun buildMediaNotification(title: String, playing: Boolean): Notification {
+        val contentIntent = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, swapify.app.MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val playPause = if (playing) {
+            mediaAction(android.R.drawable.ic_media_pause, swapify.app.R.string.player_pause, ACTION_PAUSE, 2)
+        } else {
+            mediaAction(android.R.drawable.ic_media_play, swapify.app.R.string.player_play, ACTION_PLAY, 1)
+        }
+
+        return Notification.Builder(this, CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(getString(swapify.app.R.string.notification_local_playing))
+            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setContentIntent(contentIntent)
+            .setOnlyAlertOnce(true)
+            .addAction(mediaAction(android.R.drawable.ic_media_previous, swapify.app.R.string.player_previous, ACTION_PREVIOUS, 3))
+            .addAction(playPause)
+            .addAction(mediaAction(android.R.drawable.ic_media_next, swapify.app.R.string.player_next, ACTION_NEXT, 4))
+            .setStyle(
+                Notification.MediaStyle()
+                    .setMediaSession(mediaSession.sessionToken)
+                    .setShowActionsInCompactView(0, 1, 2)
+            )
             .build()
     }
 }

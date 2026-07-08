@@ -2,10 +2,16 @@ package swapify.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Paleta Swapify — tomada del rojo carmesí del icono de la app
+val SwapifyRed = Color(0xFFA30D26)
+val SwapifyRedBright = Color(0xFFC8102E)
+val SwapifyRedDeep = Color(0xFF5E0716)
+val SwapifySilver = Color(0xFFC9CDD3)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val DarkBackground = Color(0xFF150A0D)
+val DarkSurface = Color(0xFF1E1014)
+val DarkSurfaceVariant = Color(0xFF2E181E)
+
+val LightBackground = Color(0xFFFFF8F8)
+val LightSurface = Color(0xFFFFFFFF)
+val LightSurfaceVariant = Color(0xFFF6E3E6)

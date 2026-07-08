@@ -5,12 +5,20 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import swapify.app.ui.theme.SwapifyRed
+import swapify.app.ui.theme.SwapifyRedBright
+import swapify.app.ui.theme.SwapifyRedDeep
 import swapify.app.services.AudioService
 import swapify.app.ui.SwapifyTopBar
 import swapify.app.ui.FileExplorerSection
@@ -97,14 +105,38 @@ fun SwapifyScreen() {
             )
         },
         bottomBar = {
+            // Contenedor transparente + Box interior con degradado: Button no
+            // admite Brush como color de fondo, pero sí recorta su contenido
+            // a la forma, así que el degradado hereda las esquinas redondeadas.
             Button(
                 onClick = openKofi,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Transparent,
+                    contentColor = Color.White
+                ),
+                contentPadding = PaddingValues(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.navigationBars)
                     .padding(16.dp)
             ) {
-                Text(stringResource(R.string.donate_button))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            // Simétrico: oscuro en los extremos, carmesí en el centro
+                            Brush.horizontalGradient(
+                                listOf(SwapifyRedDeep, SwapifyRed, SwapifyRedBright, SwapifyRed, SwapifyRedDeep)
+                            )
+                        )
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.donate_button),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
     ) { innerPadding ->

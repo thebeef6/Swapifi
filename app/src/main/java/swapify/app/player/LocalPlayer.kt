@@ -19,6 +19,9 @@ class LocalPlayer(private val context: Context) {
     private var deviceCallbackRegistered = false
 
     var onSongEnded: (() -> Unit)? = null
+    // La duración real no se conoce hasta STATE_READY; la notificación multimedia
+    // la necesita para mostrar la barra de progreso, así que avisamos entonces.
+    var onReady: (() -> Unit)? = null
     val currentPosition = mutableStateOf(0L)
     val duration = mutableStateOf(0L)
 
@@ -112,6 +115,9 @@ class LocalPlayer(private val context: Context) {
             it.play()
             it.addListener(object : Player.Listener {
                 override fun onPlaybackStateChanged(state: Int) {
+                    if (state == Player.STATE_READY) {
+                        onReady?.invoke()
+                    }
                     if (state == Player.STATE_ENDED) {
                         onSongEnded?.invoke()
                     }
@@ -157,6 +163,18 @@ class LocalPlayer(private val context: Context) {
 
     fun isPlaying(): Boolean {
         return player?.isPlaying ?: false
+    }
+
+    // Hay una canción cargada (sonando o en pausa); distingue el estado
+    // "reproductor local en uso" del reposo, para la notificación multimedia.
+    fun hasMedia(): Boolean = player != null
+
+    fun positionMs(): Long = player?.currentPosition ?: 0L
+
+    fun durationMs(): Long = player?.duration?.coerceAtLeast(0L) ?: 0L
+
+    fun seekTo(positionMs: Long) {
+        player?.seekTo(positionMs)
     }
 
     // isPlaying() devuelve false mientras ExoPlayer sigue en BUFFERING justo tras

@@ -60,4 +60,5 @@
 
     <!-- Service notification -->
     <string name="notification_active">Swapify active</string>
+    <string name="notification_local_playing">Local music</string>
 </resources>
