@@ -34,7 +34,15 @@ object PlayerState {
 
     fun loadSelectedFolder(context: Context) {
         val prefs = context.getSharedPreferences("Swapify_prefs", Context.MODE_PRIVATE)
-        selectedFolder.value = prefs.getString("selected_folder", "") ?: ""
+        // Primera ejecución (sin carpeta guardada): se abre directamente en la
+        // carpeta Music/Swapify con las canciones que exporta la app, para que
+        // el usuario vea contenido desde el primer momento. Puede cambiarla
+        // después; su elección queda guardada y aquí se respeta.
+        val defaultFolder = java.io.File(
+            android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_MUSIC),
+            "Swapify"
+        ).absolutePath
+        selectedFolder.value = prefs.getString("selected_folder", defaultFolder) ?: defaultFolder
     }
 
     fun playCurrent() {

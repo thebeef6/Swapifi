@@ -25,7 +25,7 @@
     <!-- Help -->
     <string name="help_title">Configura Swapify</string>
     <string name="help_intro">Para que Swapify funcione correctamente, sigue estos pasos:</string>
-    <string name="help_step1">1. Concede el permiso de música y audio cuando se solicite</string>
+    <string name="help_step1">1. Concede el permiso de música y audio y el de notificaciones cuando se soliciten</string>
     <string name="help_step2">2. Desactiva la optimización de batería para Swapify en los ajustes del sistema</string>
     <string name="help_step3">3. Mantén Swapify abierta en segundo plano mientras usas Spotify</string>
     <string name="help_step4">4. Mientras suena tu música local, puedes subir o bajar su volumen con el volumen de alarma (los botones de volumen del móvil)</string>
