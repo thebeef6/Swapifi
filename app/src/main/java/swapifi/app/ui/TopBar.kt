@@ -1,35 +1,22 @@
-package swapify.app.ui
+package swapifi.app.ui
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import kotlinx.coroutines.delay
-import swapify.app.R
-import swapify.app.ui.theme.SwapifyRed
-import swapify.app.ui.theme.SwapifyRedDeep
+import swapifi.app.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SwapifyTopBar(
+fun SwapifiTopBar(
     onDonateClick: () -> Unit = {},
     onHelpClick: () -> Unit = {}
 ) {
@@ -38,11 +25,6 @@ fun SwapifyTopBar(
     var showBugReport by remember { mutableStateOf(false) }
     var showContact by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
-
-    // Easter egg: 6 toques seguidos sobre el icono muestran "Dufy"
-    var iconTaps by remember { mutableIntStateOf(0) }
-    var lastTapAt by remember { mutableLongStateOf(0L) }
-    var showDufy by remember { mutableStateOf(false) }
 
     TopAppBar(
         navigationIcon = {
@@ -55,19 +37,6 @@ fun SwapifyTopBar(
                     .padding(start = 12.dp)
                     .size(40.dp)
                     .graphicsLayer(scaleX = 1.4f, scaleY = 1.4f)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        val now = System.currentTimeMillis()
-                        // "Seguidas" = sin pausas largas: más de 1,5 s reinicia la cuenta
-                        iconTaps = if (now - lastTapAt < 1500) iconTaps + 1 else 1
-                        lastTapAt = now
-                        if (iconTaps >= 6) {
-                            iconTaps = 0
-                            showDufy = true
-                        }
-                    }
             )
         },
         title = {
@@ -115,35 +84,4 @@ fun SwapifyTopBar(
     if (showBugReport) BugReportPopup(onDismiss = { showBugReport = false })
     if (showContact) ContactPopup(onDismiss = { showContact = false })
     if (showAbout) AboutPopup(onDismiss = { showAbout = false })
-    if (showDufy) DufyEasterEgg(onDismiss = { showDufy = false })
-}
-
-@Composable
-private fun DufyEasterEgg(onDismiss: () -> Unit) {
-    // Se desvanece solo pasados unos segundos, como un guiño fugaz
-    LaunchedEffect(Unit) {
-        delay(2500)
-        onDismiss()
-    }
-    Dialog(onDismissRequest = onDismiss) {
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(32.dp))
-                .background(Brush.verticalGradient(listOf(SwapifyRed, SwapifyRedDeep)))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDismiss
-                )
-                .padding(horizontal = 56.dp, vertical = 40.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Dufy",
-                fontSize = 64.sp,
-                fontWeight = FontWeight.Black,
-                color = Color.White
-            )
-        }
-    }
 }

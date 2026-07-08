@@ -1,7 +1,7 @@
-# Swapify — Contexto del proyecto
+# Swapifi — Contexto del proyecto
 
 ## ¿Qué hace?
-Swapify detecta los anuncios de Spotify y reproduce música local del usuario mientras tanto, silenciando Spotify automáticamente y reanudándolo cuando el anuncio termina.
+Swapifi detecta los anuncios de Spotify y reproduce música local del usuario mientras tanto, silenciando Spotify automáticamente y reanudándolo cuando el anuncio termina.
 
 ## Cómo funciona técnicamente
 
@@ -38,7 +38,7 @@ Swapify detecta los anuncios de Spotify y reproduce música local del usuario mi
 services/AudioService.kt      → lógica principal (detección, volumen, control Spotify)
 player/LocalPlayer.kt         → reproductor ExoPlayer con callbacks
 state/PlayerState.kt          → estado compartido entre UI y Service
-utils/RawMusicExporter.kt     → exporta canciones de raw/ a Music/Swapify/ al instalar
+utils/RawMusicExporter.kt     → exporta canciones de raw/ a Music/Swapifi/ al instalar
 ui/MainActivity.kt            → pantalla principal
 ui/PlayerSection.kt           → reproductor con barra de progreso y controles
 ui/FileExplorerSection.kt     → lista de canciones filtrada por carpeta
@@ -67,7 +67,7 @@ ui/FolderPickerPopup.kt       → selector de carpeta
 - Cambiar emails placeholder en ContactPopup.kt y BugReportPopup.kt
 - Cambiar URL Ko-fi en DonatePopup.kt por URL real (https://ko-fi.com/TUNOMBRE)
 - Cambiar el icono de la app
-- Crear cuenta Ko-fi con nombre Swapify
+- Crear cuenta Ko-fi con nombre Swapifi
 
 ## Idiomas soportados
 - Español (por defecto) — `res/values/strings.xml`

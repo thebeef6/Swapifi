@@ -1,4 +1,4 @@
-package swapify.app.player
+package swapifi.app.player
 
 import android.content.Context
 import android.media.AudioDeviceCallback
@@ -75,7 +75,7 @@ class LocalPlayer(private val context: Context) {
         val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
         val preferred = priorityTypes.firstNotNullOfOrNull { type -> devices.firstOrNull { it.type == type } }
         player?.setPreferredAudioDevice(preferred)
-        Log.d("Swapify", "🔈 Dispositivo de salida preferido: ${preferred?.type ?: "por defecto (altavoz)"}")
+        Log.d("Swapifi", "🔈 Dispositivo de salida preferido: ${preferred?.type ?: "por defecto (altavoz)"}")
     }
 
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -127,8 +127,8 @@ class LocalPlayer(private val context: Context) {
                     }
                 }
             })
-            Log.d("Swapify", "🎵 Reproduciendo audio local: $uri")
-            Log.d("Swapify", "🔊 Player volume: $volume | STREAM_ALARM actual: ${audioManager.getStreamVolume(AudioManager.STREAM_ALARM)}")
+            Log.d("Swapifi", "🎵 Reproduciendo audio local: $uri")
+            Log.d("Swapifi", "🔊 Player volume: $volume | STREAM_ALARM actual: ${audioManager.getStreamVolume(AudioManager.STREAM_ALARM)}")
         }
         updatePreferredOutputDevice()
         if (!deviceCallbackRegistered) {
@@ -162,7 +162,7 @@ class LocalPlayer(private val context: Context) {
         player = null
         currentPosition.value = 0L
         duration.value = 0L
-        Log.d("Swapify", "⏹ Audio local detenido")
+        Log.d("Swapifi", "⏹ Audio local detenido")
     }
 
     fun isPlaying(): Boolean {

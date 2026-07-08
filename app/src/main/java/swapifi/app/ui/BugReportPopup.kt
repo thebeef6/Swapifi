@@ -1,4 +1,4 @@
-package swapify.app.ui
+package swapifi.app.ui
 
 import android.content.Intent
 import androidx.core.net.toUri
@@ -10,7 +10,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import swapify.app.R
+import swapifi.app.R
 @Composable
 fun BugReportPopup(onDismiss: () -> Unit) {
     var bugText by remember { mutableStateOf("") }
@@ -41,8 +41,14 @@ fun BugReportPopup(onDismiss: () -> Unit) {
         confirmButton = {
             TextButton(
                 onClick = {
+                    // Asunto y cuerpo van codificados en la propia URI mailto:
+                    // varias apps de correo ignoran los extras del intent y solo
+                    // leen los parámetros subject/body de la URI. Los extras se
+                    // mantienen como respaldo para las que hacen lo contrario.
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        data = "mailto:davidig.info@gmail.com".toUri()
+                        data = ("mailto:davidig.info@gmail.com" +
+                                "?subject=" + android.net.Uri.encode(emailSubject) +
+                                "&body=" + android.net.Uri.encode(bugText)).toUri()
                         putExtra(Intent.EXTRA_SUBJECT, emailSubject)
                         putExtra(Intent.EXTRA_TEXT, bugText)
                     }

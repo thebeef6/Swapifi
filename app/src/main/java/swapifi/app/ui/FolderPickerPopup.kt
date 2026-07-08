@@ -1,4 +1,4 @@
-package swapify.app.ui
+package swapifi.app.ui
 
 import android.os.Environment
 import androidx.compose.foundation.clickable
@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import swapify.app.R
+import swapifi.app.R
 
 @Composable
 fun FolderPickerPopup(

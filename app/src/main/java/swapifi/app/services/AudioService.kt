@@ -1,4 +1,4 @@
-package swapify.app.services
+package swapifi.app.services
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -26,14 +26,14 @@ import kotlin.math.roundToInt
 
 class AudioService : Service() {
 
-    private val CHANNEL_ID = "SwapifyChannel"
+    private val CHANNEL_ID = "SwapifiChannel"
     private val NOTIFICATION_ID = 1
 
     companion object {
-        private const val ACTION_PLAY = "swapify.app.action.PLAY"
-        private const val ACTION_PAUSE = "swapify.app.action.PAUSE"
-        private const val ACTION_NEXT = "swapify.app.action.NEXT"
-        private const val ACTION_PREVIOUS = "swapify.app.action.PREVIOUS"
+        private const val ACTION_PLAY = "swapifi.app.action.PLAY"
+        private const val ACTION_PAUSE = "swapifi.app.action.PAUSE"
+        private const val ACTION_NEXT = "swapifi.app.action.NEXT"
+        private const val ACTION_PREVIOUS = "swapifi.app.action.PREVIOUS"
     }
 
     private var isMuted = false
@@ -48,7 +48,7 @@ class AudioService : Service() {
 
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private val muteRunnable = Runnable {
-        Log.d("Swapify", "🔴 Silenciando — posible anuncio")
+        Log.d("Swapifi", "🔴 Silenciando — posible anuncio")
         mute()
     }
 
@@ -62,11 +62,11 @@ class AudioService : Service() {
         if (current != originalAlarmVolume) {
             audioManager.setStreamVolume(AudioManager.STREAM_ALARM, originalAlarmVolume, 0)
             lastOwnAlarmWriteAt = android.os.SystemClock.elapsedRealtime()
-            Log.d("Swapify", "🔁 Sistema dejó la alarma en $current — reintentando A: $originalAlarmVolume")
+            Log.d("Swapifi", "🔁 Sistema dejó la alarma en $current — reintentando A: $originalAlarmVolume")
         }
     }
     private lateinit var audioManager: AudioManager
-    private lateinit var localPlayer: swapify.app.player.LocalPlayer
+    private lateinit var localPlayer: swapifi.app.player.LocalPlayer
     private lateinit var volumeObserver: ContentObserver
     private lateinit var mediaSession: MediaSession
 
@@ -92,8 +92,8 @@ class AudioService : Service() {
                     length > 0 && position > 1000 && length - position > 3000
                 ) {
                     handler.removeCallbacks(muteRunnable)
-                    swapify.app.state.PlayerState.isSpotifyPlaying.value = false
-                    Log.d("Swapify", "⏸ Pausa manual de Spotify — mute cancelado (pos=$position/$length)")
+                    swapifi.app.state.PlayerState.isSpotifyPlaying.value = false
+                    Log.d("Swapifi", "⏸ Pausa manual de Spotify — mute cancelado (pos=$position/$length)")
                 }
                 return
             }
@@ -101,7 +101,7 @@ class AudioService : Service() {
             if (id.startsWith("spotify:track:")) {
                 if (isMuted) {
                     if (localPlayer.isActive()) {
-                        Log.d("Swapify", "⏸ Tu canción sigue sonando — pausando Spotify de nuevo")
+                        Log.d("Swapifi", "⏸ Tu canción sigue sonando — pausando Spotify de nuevo")
                         pauseSpotify()
                         waitingForLocalSongToEnd = true
                         return
@@ -109,7 +109,7 @@ class AudioService : Service() {
                         unmute()
                     }
                 } else {
-                    swapify.app.state.PlayerState.isSpotifyPlaying.value = true
+                    swapifi.app.state.PlayerState.isSpotifyPlaying.value = true
                 }
 
                 // Cancela solo el mute pendiente: un removeCallbacksAndMessages(null)
@@ -122,7 +122,7 @@ class AudioService : Service() {
                 // manipulado daría un timeLeft negativo y postDelayed ejecutaría
                 // mute() inmediatamente durante la reproducción normal.
                 if (length <= 0 || position < 0 || position > length) {
-                    Log.d("Swapify", "⚠ Extras inválidos (length=$length, position=$position) — mute no programado")
+                    Log.d("Swapifi", "⚠ Extras inválidos (length=$length, position=$position) — mute no programado")
                     return
                 }
                 val timeLeft = (length - position).toLong()
@@ -130,13 +130,13 @@ class AudioService : Service() {
                 // Capturar B aquí, antes del delay
                 val capturedB = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
                 if (capturedB > 0) spotifyMusicVolume = capturedB
-                Log.d("Swapify", "🟢 Canción | Tiempo restante: ${timeLeft}ms | B capturado: $spotifyMusicVolume")
+                Log.d("Swapifi", "🟢 Canción | Tiempo restante: ${timeLeft}ms | B capturado: $spotifyMusicVolume")
 
                 handler.postDelayed(muteRunnable, timeLeft)
 
             } else if (id.startsWith("spotify:ad:") || id.isEmpty()) {
-                swapify.app.state.PlayerState.isSpotifyPlaying.value = false
-                Log.d("Swapify", "🔴 Anuncio — manteniendo silencio")
+                swapifi.app.state.PlayerState.isSpotifyPlaying.value = false
+                Log.d("Swapifi", "🔴 Anuncio — manteniendo silencio")
                 if (!isMuted) mute()
             }
         }
@@ -159,7 +159,7 @@ class AudioService : Service() {
             // corrompiendo A. Los eventos de esa ventana se ignoran; el reintento
             // diferido se encarga de volver a imponer A después.
             if (android.os.SystemClock.elapsedRealtime() - lastOwnAlarmWriteAt < 1000) {
-                Log.d("Swapify", "📊 Eco de escritura propia ignorado (alarma=$value)")
+                Log.d("Swapifi", "📊 Eco de escritura propia ignorado (alarma=$value)")
                 return
             }
             // Con Spotify sonando, el volumen de alarma que fija el usuario pasa
@@ -167,7 +167,7 @@ class AudioService : Service() {
             // el silenciado los cambios van a C via ContentObserver, como antes.
             if (!isMuted && value != originalAlarmVolume) {
                 originalAlarmVolume = value
-                Log.d("Swapify", "📊 A actualizado: $originalAlarmVolume")
+                Log.d("Swapifi", "📊 A actualizado: $originalAlarmVolume")
             }
         }
     }
@@ -175,19 +175,19 @@ class AudioService : Service() {
     override fun onCreate() {
         super.onCreate()
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        localPlayer = swapify.app.player.LocalPlayer(this)
-        swapify.app.state.PlayerState.loadSelectedFolder(this)
-        swapify.app.state.PlayerState.localPlayerRef = localPlayer
+        localPlayer = swapifi.app.player.LocalPlayer(this)
+        swapifi.app.state.PlayerState.loadSelectedFolder(this)
+        swapifi.app.state.PlayerState.localPlayerRef = localPlayer
 
         originalAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
         spotifyMusicVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-        Log.d("Swapify", "📊 Inicial — A: $originalAlarmVolume | B: $spotifyMusicVolume")
+        Log.d("Swapifi", "📊 Inicial — A: $originalAlarmVolume | B: $spotifyMusicVolume")
 
         registerVolumeObserver()
         createMediaSession()
 
         localPlayer.onSongEnded = {
-            Log.d("Swapify", "🎵 Canción local terminada | C: $userAlarmVolumeWhileLocal")
+            Log.d("Swapifi", "🎵 Canción local terminada | C: $userAlarmVolumeWhileLocal")
             if (waitingForLocalSongToEnd) {
                 waitingForLocalSongToEnd = false
 
@@ -197,9 +197,9 @@ class AudioService : Service() {
                 localPlayer.stop()
                 restoreSpotifyVolumes()
                 isMuted = false
-                swapify.app.state.PlayerState.isPlayingLocal.value = false
+                swapifi.app.state.PlayerState.isPlayingLocal.value = false
                 handler.postDelayed({ playSpotify() }, 300)
-                swapify.app.state.PlayerState.isSpotifyPlaying.value = true
+                swapifi.app.state.PlayerState.isSpotifyPlaying.value = true
 
             }
             updateMediaNotification()
@@ -209,28 +209,28 @@ class AudioService : Service() {
             updateMediaNotification()
         }
 
-        swapify.app.state.PlayerState.onPlayRequested = { file ->
+        swapifi.app.state.PlayerState.onPlayRequested = { file ->
             val uri = android.net.Uri.fromFile(file)
             localPlayer.play(uri, 1f)
             updateMediaNotification()
         }
-        swapify.app.state.PlayerState.onPlayRequestedWithVolume = { file, volume ->
+        swapifi.app.state.PlayerState.onPlayRequestedWithVolume = { file, volume ->
             val uri = android.net.Uri.fromFile(file)
             localPlayer.play(uri, volume)
             updateMediaNotification()
         }
-        swapify.app.state.PlayerState.onPauseRequested = {
+        swapifi.app.state.PlayerState.onPauseRequested = {
             localPlayer.pause()
             updateMediaNotification()
         }
-        swapify.app.state.PlayerState.onResumeRequested = {
+        swapifi.app.state.PlayerState.onResumeRequested = {
             val resumed = localPlayer.resume()
             if (resumed) updateMediaNotification()
             resumed
         }
 
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, buildNotification(getString(swapify.app.R.string.notification_active)))
+        startForeground(NOTIFICATION_ID, buildNotification(getString(swapifi.app.R.string.notification_active)))
         registerSpotifyReceiver()
         // NOT_EXPORTED: los broadcasts del sistema llegan igualmente y ninguna
         // app de terceros puede falsificarlos para manipular A.
@@ -273,13 +273,13 @@ class AudioService : Service() {
                         // al terminar llegue el broadcast de la siguiente
                         // canción, que restaura el flujo normal.
                         !audioManager.isMusicActive -> {
-                            Log.d("Swapify", "🔴 Anuncio en curso al abrir — silenciando")
+                            Log.d("Swapifi", "🔴 Anuncio en curso al abrir — silenciando")
                             if (liveMusicVolume > 0) spotifyMusicVolume = liveMusicVolume
                             if (!isMuted) mute()
                             playSpotify()
                         }
 
-                        else -> Log.d("Swapify", "🔎 Sin respuesta de Spotify — era otro reproductor")
+                        else -> Log.d("Swapifi", "🔎 Sin respuesta de Spotify — era otro reproductor")
                     }
                 }, 1200)
             }, 500)
@@ -291,10 +291,10 @@ class AudioService : Service() {
     // sincronía, igual que los botones en pantalla.
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_PLAY -> swapify.app.state.PlayerState.resume()
-            ACTION_PAUSE -> swapify.app.state.PlayerState.pause()
-            ACTION_NEXT -> swapify.app.state.PlayerState.next()
-            ACTION_PREVIOUS -> swapify.app.state.PlayerState.previous()
+            ACTION_PLAY -> swapifi.app.state.PlayerState.resume()
+            ACTION_PAUSE -> swapifi.app.state.PlayerState.pause()
+            ACTION_NEXT -> swapifi.app.state.PlayerState.next()
+            ACTION_PREVIOUS -> swapifi.app.state.PlayerState.previous()
         }
         return START_STICKY
     }
@@ -309,12 +309,12 @@ class AudioService : Service() {
         contentResolver.unregisterContentObserver(volumeObserver)
         // El singleton PlayerState sobrevive al servicio; sin esto retendría el
         // LocalPlayer (y su Context) tras morir el servicio — fuga de memoria.
-        swapify.app.state.PlayerState.localPlayerRef = null
+        swapifi.app.state.PlayerState.localPlayerRef = null
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        Log.d("Swapify", "🛑 App cerrada desde recientes — deteniendo todo")
+        Log.d("Swapifi", "🛑 App cerrada desde recientes — deteniendo todo")
         handler.removeCallbacksAndMessages(null)
         if (isMuted) unmute()
         localPlayer.stop()
@@ -333,12 +333,12 @@ class AudioService : Service() {
                 if (!isMuted) {
                     if (currentMusic != spotifyMusicVolume) {
                         spotifyMusicVolume = currentMusic
-                        Log.d("Swapify", "📊 B actualizado: $spotifyMusicVolume")
+                        Log.d("Swapifi", "📊 B actualizado: $spotifyMusicVolume")
                     }
                 } else if (!isMuting) {
                     if (userAlarmVolumeWhileLocal == null || currentAlarm != userAlarmVolumeWhileLocal) {
                         userAlarmVolumeWhileLocal = currentAlarm
-                        Log.d("Swapify", "📊 C capturado: $userAlarmVolumeWhileLocal")
+                        Log.d("Swapifi", "📊 C capturado: $userAlarmVolumeWhileLocal")
                     }
                 }
             }
@@ -370,16 +370,16 @@ class AudioService : Service() {
 
     private fun playSpotify() {
         sendMediaButton(android.view.KeyEvent.KEYCODE_MEDIA_PLAY)
-        Log.d("Swapify", "▶ Comando PLAY enviado a Spotify")
+        Log.d("Swapifi", "▶ Comando PLAY enviado a Spotify")
     }
 
     private fun pauseSpotify() {
         sendMediaButton(android.view.KeyEvent.KEYCODE_MEDIA_PAUSE)
-        Log.d("Swapify", "⏸ Comando PAUSE enviado a Spotify")
+        Log.d("Swapifi", "⏸ Comando PAUSE enviado a Spotify")
     }
 
     private fun loadSongsFromFolder(): List<File> {
-        val folder = swapify.app.state.PlayerState.selectedFolder.value
+        val folder = swapifi.app.state.PlayerState.selectedFolder.value
         val songs = mutableListOf<File>()
         val projection = arrayOf(MediaStore.Audio.Media.DATA)
         val cursor = contentResolver.query(
@@ -405,7 +405,7 @@ class AudioService : Service() {
         isMuting = true
         isMuted = true
         userAlarmVolumeWhileLocal = null
-        swapify.app.state.PlayerState.isSpotifyPlaying.value = false
+        swapifi.app.state.PlayerState.isSpotifyPlaying.value = false
 
         val maxMusic = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val maxAlarm = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
@@ -416,35 +416,35 @@ class AudioService : Service() {
         alarmIndexSetOnMute = (relativeVolume * maxAlarm).roundToInt()
         audioManager.setStreamVolume(AudioManager.STREAM_ALARM, alarmIndexSetOnMute, 0)
         lastOwnAlarmWriteAt = android.os.SystemClock.elapsedRealtime()
-        Log.d("Swapify", "🔴 Muteando | B: $spotifyMusicVolume | Alarma ajustada: $alarmIndexSetOnMute")
+        Log.d("Swapifi", "🔴 Muteando | B: $spotifyMusicVolume | Alarma ajustada: $alarmIndexSetOnMute")
 
-        if (swapify.app.state.PlayerState.playlist.isEmpty()) {
+        if (swapifi.app.state.PlayerState.playlist.isEmpty()) {
             val songs = loadSongsFromFolder()
             if (songs.isNotEmpty()) {
                 val randomIndex = songs.indices.random()
-                swapify.app.state.PlayerState.setPlaylist(songs, randomIndex)
+                swapifi.app.state.PlayerState.setPlaylist(songs, randomIndex)
             }
         }
 
-        if (swapify.app.state.PlayerState.playlist.isNotEmpty()) {
+        if (swapifi.app.state.PlayerState.playlist.isNotEmpty()) {
             // Con una sola canción el rango queda vacío y .random() lanzaría
             // NoSuchElementException, matando el servicio (y con él todo el
             // silenciado de anuncios hasta reabrir la app).
-            val candidates = swapify.app.state.PlayerState.playlist.indices - swapify.app.state.PlayerState.currentIndex
-            val newIndex = if (candidates.isNotEmpty()) candidates.random() else swapify.app.state.PlayerState.currentIndex
-            swapify.app.state.PlayerState.currentIndex = newIndex
-            swapify.app.state.PlayerState.playCurrentWithVolume(relativeVolume)
-            Log.d("Swapify", "🎵 Reproduciendo playlist usuario | B: $spotifyMusicVolume")
+            val candidates = swapifi.app.state.PlayerState.playlist.indices - swapifi.app.state.PlayerState.currentIndex
+            val newIndex = if (candidates.isNotEmpty()) candidates.random() else swapifi.app.state.PlayerState.currentIndex
+            swapifi.app.state.PlayerState.currentIndex = newIndex
+            swapifi.app.state.PlayerState.playCurrentWithVolume(relativeVolume)
+            Log.d("Swapifi", "🎵 Reproduciendo playlist usuario | B: $spotifyMusicVolume")
         } else {
             val songs = listOf(
-                swapify.app.R.raw.halfway_in,
-                swapify.app.R.raw.never_coming_down,
-                swapify.app.R.raw.two_things
+                swapifi.app.R.raw.halfway_in,
+                swapifi.app.R.raw.never_coming_down,
+                swapifi.app.R.raw.two_things
             )
             val randomSong = songs.random()
             val uri = "android.resource://${packageName}/$randomSong".toUri()
             localPlayer.play(uri, relativeVolume)
-            Log.d("Swapify", "🎵 Reproduciendo fallback: $randomSong")
+            Log.d("Swapifi", "🎵 Reproduciendo fallback: $randomSong")
             // La rama de playlist ya actualiza vía onPlayRequestedWithVolume;
             // el fallback llama a localPlayer directamente y necesita esto.
             updateMediaNotification()
@@ -457,10 +457,10 @@ class AudioService : Service() {
         if (!isMuted) return
         isMuted = false
         localPlayer.stop()
-        swapify.app.state.PlayerState.isPlayingLocal.value = false
+        swapifi.app.state.PlayerState.isPlayingLocal.value = false
 
         restoreSpotifyVolumes()
-        swapify.app.state.PlayerState.isSpotifyPlaying.value = true
+        swapifi.app.state.PlayerState.isSpotifyPlaying.value = true
         updateMediaNotification()
 
     }
@@ -488,7 +488,7 @@ class AudioService : Service() {
         handler.removeCallbacks(alarmReassertRunnable)
         handler.postDelayed(alarmReassertRunnable, 1500)
 
-        Log.d("Swapify", "🟢 Restaurando | Música: $newMusicVolume | Alarma: $originalAlarmVolume")
+        Log.d("Swapifi", "🟢 Restaurando | Música: $newMusicVolume | Alarma: $originalAlarmVolume")
     }
 
     private fun registerSpotifyReceiver() {
@@ -503,7 +503,7 @@ class AudioService : Service() {
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Swapify",
+            "Swapifi",
             NotificationManager.IMPORTANCE_LOW
         )
         val manager = getSystemService(NotificationManager::class.java)
@@ -512,7 +512,7 @@ class AudioService : Service() {
 
     private fun buildNotification(text: String): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Swapify")
+            .setContentTitle("Swapifi")
             .setContentText(text)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .build()
@@ -523,22 +523,22 @@ class AudioService : Service() {
     // sesión, así que ambos caminos (callback de sesión e intents de acción)
     // tienen que existir y acabar en las mismas funciones de PlayerState.
     private fun createMediaSession() {
-        mediaSession = MediaSession(this, "Swapify")
+        mediaSession = MediaSession(this, "Swapifi")
         mediaSession.setCallback(object : MediaSession.Callback() {
             override fun onPlay() {
-                swapify.app.state.PlayerState.resume()
+                swapifi.app.state.PlayerState.resume()
             }
 
             override fun onPause() {
-                swapify.app.state.PlayerState.pause()
+                swapifi.app.state.PlayerState.pause()
             }
 
             override fun onSkipToNext() {
-                swapify.app.state.PlayerState.next()
+                swapifi.app.state.PlayerState.next()
             }
 
             override fun onSkipToPrevious() {
-                swapify.app.state.PlayerState.previous()
+                swapifi.app.state.PlayerState.previous()
             }
 
             override fun onSeekTo(pos: Long) {
@@ -561,20 +561,20 @@ class AudioService : Service() {
                     .setState(PlaybackState.STATE_STOPPED, 0L, 0f)
                     .build()
             )
-            manager.notify(NOTIFICATION_ID, buildNotification(getString(swapify.app.R.string.notification_active)))
+            manager.notify(NOTIFICATION_ID, buildNotification(getString(swapifi.app.R.string.notification_active)))
             return
         }
 
         val playing = localPlayer.isActive()
         // La reproducción de fallback (raw) no pasa por PlayerState y deja el
         // nombre vacío; mostramos el nombre de la app en su lugar.
-        val title = swapify.app.state.PlayerState.currentSongName.value
-            .ifEmpty { getString(swapify.app.R.string.app_name) }
+        val title = swapifi.app.state.PlayerState.currentSongName.value
+            .ifEmpty { getString(swapifi.app.R.string.app_name) }
 
         mediaSession.setMetadata(
             MediaMetadata.Builder()
                 .putString(MediaMetadata.METADATA_KEY_TITLE, title)
-                .putString(MediaMetadata.METADATA_KEY_ARTIST, getString(swapify.app.R.string.notification_local_playing))
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, getString(swapifi.app.R.string.notification_local_playing))
                 .putLong(MediaMetadata.METADATA_KEY_DURATION, localPlayer.durationMs())
                 .build()
         )
@@ -617,25 +617,25 @@ class AudioService : Service() {
         val contentIntent = PendingIntent.getActivity(
             this,
             0,
-            Intent(this, swapify.app.MainActivity::class.java),
+            Intent(this, swapifi.app.MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE
         )
 
         val playPause = if (playing) {
-            mediaAction(android.R.drawable.ic_media_pause, swapify.app.R.string.player_pause, ACTION_PAUSE, 2)
+            mediaAction(android.R.drawable.ic_media_pause, swapifi.app.R.string.player_pause, ACTION_PAUSE, 2)
         } else {
-            mediaAction(android.R.drawable.ic_media_play, swapify.app.R.string.player_play, ACTION_PLAY, 1)
+            mediaAction(android.R.drawable.ic_media_play, swapifi.app.R.string.player_play, ACTION_PLAY, 1)
         }
 
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
-            .setContentText(getString(swapify.app.R.string.notification_local_playing))
+            .setContentText(getString(swapifi.app.R.string.notification_local_playing))
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentIntent(contentIntent)
             .setOnlyAlertOnce(true)
-            .addAction(mediaAction(android.R.drawable.ic_media_previous, swapify.app.R.string.player_previous, ACTION_PREVIOUS, 3))
+            .addAction(mediaAction(android.R.drawable.ic_media_previous, swapifi.app.R.string.player_previous, ACTION_PREVIOUS, 3))
             .addAction(playPause)
-            .addAction(mediaAction(android.R.drawable.ic_media_next, swapify.app.R.string.player_next, ACTION_NEXT, 4))
+            .addAction(mediaAction(android.R.drawable.ic_media_next, swapifi.app.R.string.player_next, ACTION_NEXT, 4))
             .setStyle(
                 Notification.MediaStyle()
                     .setMediaSession(mediaSession.sessionToken)

@@ -1,4 +1,4 @@
-package swapify.app.utils
+package swapifi.app.utils
 
 import android.content.Context
 import android.media.MediaScannerConnection
@@ -10,25 +10,25 @@ import java.io.FileOutputStream
 object RawMusicExporter {
 
     private val songs = mapOf(
-        swapify.app.R.raw.halfway_in to "Halfway In - Anno Domini Beats.mp3",
-        swapify.app.R.raw.never_coming_down to "Never Coming Down - The Soundlings.mp3",
-        swapify.app.R.raw.two_things to "Two Things - Anno Domini Beats.mp3"
+        swapifi.app.R.raw.halfway_in to "Halfway In - Anno Domini Beats.mp3",
+        swapifi.app.R.raw.never_coming_down to "Never Coming Down - The Soundlings.mp3",
+        swapifi.app.R.raw.two_things to "Two Things - Anno Domini Beats.mp3"
     )
 
     fun exportIfNeeded(context: Context) {
-        val SwapifyFolder = File(
+        val SwapifiFolder = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),
-            "Swapify"
+            "Swapifi"
         )
 
-        if (!SwapifyFolder.exists()) {
-            SwapifyFolder.mkdirs()
+        if (!SwapifiFolder.exists()) {
+            SwapifiFolder.mkdirs()
         }
 
         val filesToScan = mutableListOf<String>()
 
         for ((resId, fileName) in songs) {
-            val destFile = File(SwapifyFolder, fileName)
+            val destFile = File(SwapifiFolder, fileName)
             if (!destFile.exists()) {
                 try {
                     context.resources.openRawResource(resId).use { input ->
@@ -36,12 +36,12 @@ object RawMusicExporter {
                             input.copyTo(output)
                         }
                     }
-                    Log.d("Swapify", "✅ Exportada: $fileName")
+                    Log.d("Swapifi", "✅ Exportada: $fileName")
                 } catch (e: Exception) {
-                    Log.e("Swapify", "❌ Error exportando $fileName: ${e.message}")
+                    Log.e("Swapifi", "❌ Error exportando $fileName: ${e.message}")
                 }
             } else {
-                Log.d("Swapify", "⏭ Ya existe: $fileName")
+                Log.d("Swapifi", "⏭ Ya existe: $fileName")
             }
             // Escanear siempre, exista o no
             filesToScan.add(destFile.absolutePath)
@@ -53,7 +53,7 @@ object RawMusicExporter {
                 context,
                 filesToScan.toTypedArray(),
                 filesToScan.map { "audio/mpeg" }.toTypedArray(),
-                { path, uri -> Log.d("Swapify", "📱 MediaStore indexado: $path") }
+                { path, uri -> Log.d("Swapifi", "📱 MediaStore indexado: $path") }
             )
         }
     }
