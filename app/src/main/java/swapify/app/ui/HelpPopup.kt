@@ -28,6 +28,8 @@ fun HelpPopup(onDismiss: () -> Unit) {
                 Text(stringResource(R.string.help_step2))
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(stringResource(R.string.help_step3))
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(stringResource(R.string.help_step4))
             }
         },
         confirmButton = {

@@ -1,7 +1,7 @@
 package swapify.app.ui
 
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -10,7 +10,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.stringResource
 import swapify.app.R
 @Composable
 fun BugReportPopup(onDismiss: () -> Unit) {
@@ -43,7 +42,7 @@ fun BugReportPopup(onDismiss: () -> Unit) {
             TextButton(
                 onClick = {
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        data = Uri.parse("mailto:davidig.info@gmail.com")
+                        data = "mailto:davidig.info@gmail.com".toUri()
                         putExtra(Intent.EXTRA_SUBJECT, emailSubject)
                         putExtra(Intent.EXTRA_TEXT, bugText)
                     }

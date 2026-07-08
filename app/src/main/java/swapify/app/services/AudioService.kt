@@ -20,6 +20,7 @@ import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.net.toUri
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -306,6 +307,9 @@ class AudioService : Service() {
         unregisterReceiver(spotifyReceiver)
         unregisterReceiver(volumeChangedReceiver)
         contentResolver.unregisterContentObserver(volumeObserver)
+        // El singleton PlayerState sobrevive al servicio; sin esto retendría el
+        // LocalPlayer (y su Context) tras morir el servicio — fuga de memoria.
+        swapify.app.state.PlayerState.localPlayerRef = null
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -432,9 +436,13 @@ class AudioService : Service() {
             swapify.app.state.PlayerState.playCurrentWithVolume(relativeVolume)
             Log.d("Swapify", "🎵 Reproduciendo playlist usuario | B: $spotifyMusicVolume")
         } else {
-            val songs = listOf("halfway_in", "never_coming_down", "two_things")
+            val songs = listOf(
+                swapify.app.R.raw.halfway_in,
+                swapify.app.R.raw.never_coming_down,
+                swapify.app.R.raw.two_things
+            )
             val randomSong = songs.random()
-            val uri = android.net.Uri.parse("android.resource://${packageName}/raw/$randomSong")
+            val uri = "android.resource://${packageName}/$randomSong".toUri()
             localPlayer.play(uri, relativeVolume)
             Log.d("Swapify", "🎵 Reproduciendo fallback: $randomSong")
             // La rama de playlist ya actualiza vía onPlayRequestedWithVolume;

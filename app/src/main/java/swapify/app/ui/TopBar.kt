@@ -7,7 +7,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,8 +40,8 @@ fun SwapifyTopBar(
     var showAbout by remember { mutableStateOf(false) }
 
     // Easter egg: 6 toques seguidos sobre el icono muestran "Dufy"
-    var iconTaps by remember { mutableStateOf(0) }
-    var lastTapAt by remember { mutableStateOf(0L) }
+    var iconTaps by remember { mutableIntStateOf(0) }
+    var lastTapAt by remember { mutableLongStateOf(0L) }
     var showDufy by remember { mutableStateOf(false) }
 
     TopAppBar(
@@ -82,7 +82,7 @@ fun SwapifyTopBar(
                 Text("☕")
             }
             IconButton(onClick = onHelpClick) {
-                Icon(Icons.Default.HelpOutline, contentDescription = stringResource(R.string.menu_about))
+                Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = stringResource(R.string.menu_about))
             }
             IconButton(onClick = { menuExpanded = true }) {
                 Icon(Icons.Default.MoreVert, contentDescription = null)

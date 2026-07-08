@@ -28,6 +28,7 @@
     <string name="help_step1">1. Concede el permiso de música y audio cuando se solicite</string>
     <string name="help_step2">2. Desactiva la optimización de batería para Swapify en los ajustes del sistema</string>
     <string name="help_step3">3. Mantén Swapify abierta en segundo plano mientras usas Spotify</string>
+    <string name="help_step4">4. Mientras suena tu música local, puedes subir o bajar su volumen con el volumen de alarma (los botones de volumen del móvil)</string>
     <string name="understood">Entendido</string>
 
     <!-- Settings -->
@@ -39,7 +40,7 @@
     <!-- Bug Report -->
     <string name="bug_title">Reportar un bug</string>
     <string name="bug_description">Describe el problema que has encontrado:</string>
-    <string name="bug_placeholder">Ej: la música no se silencia al pasar de canción...</string>
+    <string name="bug_placeholder">Ej: la música no se silencia al pasar de canción…</string>
     <string name="bug_email_subject">Reporte de bug - Swapify</string>
     <string name="send">Enviar</string>
     <string name="cancel">Cancelar</string>

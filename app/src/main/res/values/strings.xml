@@ -28,6 +28,7 @@
     <string name="help_step1">1. Grant the music and audio permission when prompted</string>
     <string name="help_step2">2. Disable battery optimization for Swapify in your system settings</string>
     <string name="help_step3">3. Keep Swapify running in the background while using Spotify</string>
+    <string name="help_step4">4. While your local music is playing, you can turn its volume up or down with the alarm volume (the phone\'s volume buttons)</string>
     <string name="understood">Got it</string>
 
     <!-- Settings -->
@@ -39,7 +40,7 @@
     <!-- Bug Report -->
     <string name="bug_title">Report a bug</string>
     <string name="bug_description">Describe the issue you found:</string>
-    <string name="bug_placeholder">E.g: music doesn\'t mute when the ad starts...</string>
+    <string name="bug_placeholder">E.g: music doesn\'t mute when the ad starts…</string>
     <string name="bug_email_subject">Bug report - Swapify</string>
     <string name="send">Send</string>
     <string name="cancel">Cancel</string>

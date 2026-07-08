@@ -5,7 +5,8 @@ import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.net.Uri
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -22,8 +23,8 @@ class LocalPlayer(private val context: Context) {
     // La duración real no se conoce hasta STATE_READY; la notificación multimedia
     // la necesita para mostrar la barra de progreso, así que avisamos entonces.
     var onReady: (() -> Unit)? = null
-    val currentPosition = mutableStateOf(0L)
-    val duration = mutableStateOf(0L)
+    val currentPosition = mutableLongStateOf(0L)
+    val duration = mutableLongStateOf(0L)
 
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
@@ -34,7 +35,7 @@ class LocalPlayer(private val context: Context) {
     // el propio ExoPlayer (player.volume), que atenúa la muestra de audio
     // antes de enviarla a cualquier salida. Este estado guarda esa ganancia
     // y se sincroniza con los botones físicos en progressRunnable.
-    val localVolume = mutableStateOf(getAlarmVolumeFraction())
+    val localVolume = mutableFloatStateOf(getAlarmVolumeFraction())
 
     // Último índice de STREAM_ALARM escrito por la app (o adoptado de los botones
     // físicos). Sirve para distinguir en progressRunnable un cambio externo real
@@ -58,6 +59,9 @@ class LocalPlayer(private val context: Context) {
         override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) = updatePreferredOutputDevice()
     }
 
+    // setPreferredAudioDevice está marcada @UnstableApi en Media3; se acepta
+    // explícitamente porque es la única vía para fijar la salida del player.
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     private fun updatePreferredOutputDevice() {
         // TYPE_BLUETOOTH_SCO es el perfil de llamadas (HFP), no de música: nunca
         // es una ruta válida para el ExoPlayer y se descarta explícitamente.

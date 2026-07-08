@@ -1,6 +1,7 @@
 package swapify.app.state
 
 import android.content.Context
+import androidx.core.content.edit
 import java.io.File
 
 object PlayerState {
@@ -16,8 +17,8 @@ object PlayerState {
     var onPlayRequestedWithVolume: ((File, Float) -> Unit)? = null
     var onPauseRequested: (() -> Unit)? = null
     var onResumeRequested: (() -> Boolean)? = null
-    var localPosition = androidx.compose.runtime.mutableStateOf(0L)
-    var localDuration = androidx.compose.runtime.mutableStateOf(0L)
+    var localPosition = androidx.compose.runtime.mutableLongStateOf(0L)
+    var localDuration = androidx.compose.runtime.mutableLongStateOf(0L)
     var localPlayerRef: swapify.app.player.LocalPlayer? = null
     var isSpotifyPlaying = androidx.compose.runtime.mutableStateOf(false)
     fun setPlaylist(files: List<File>, startIndex: Int = 0) {
@@ -28,7 +29,7 @@ object PlayerState {
     fun setSelectedFolder(context: Context, folderPath: String) {
         selectedFolder.value = folderPath
         val prefs = context.getSharedPreferences("Swapify_prefs", Context.MODE_PRIVATE)
-        prefs.edit().putString("selected_folder", folderPath).apply()
+        prefs.edit { putString("selected_folder", folderPath) }
     }
 
     fun loadSelectedFolder(context: Context) {

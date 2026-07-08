@@ -10,9 +10,9 @@ import java.io.FileOutputStream
 object RawMusicExporter {
 
     private val songs = mapOf(
-        "halfway_in" to "Halfway In - Anno Domini Beats.mp3",
-        "never_coming_down" to "Never Coming Down - The Soundlings.mp3",
-        "two_things" to "Two Things - Anno Domini Beats.mp3"
+        swapify.app.R.raw.halfway_in to "Halfway In - Anno Domini Beats.mp3",
+        swapify.app.R.raw.never_coming_down to "Never Coming Down - The Soundlings.mp3",
+        swapify.app.R.raw.two_things to "Two Things - Anno Domini Beats.mp3"
     )
 
     fun exportIfNeeded(context: Context) {
@@ -27,15 +27,10 @@ object RawMusicExporter {
 
         val filesToScan = mutableListOf<String>()
 
-        for ((rawName, fileName) in songs) {
+        for ((resId, fileName) in songs) {
             val destFile = File(SwapifyFolder, fileName)
             if (!destFile.exists()) {
                 try {
-                    val resId = context.resources.getIdentifier(rawName, "raw", context.packageName)
-                    if (resId == 0) {
-                        Log.e("Swapify", "❌ No se encontró el recurso raw: $rawName")
-                        continue
-                    }
                     context.resources.openRawResource(resId).use { input ->
                         FileOutputStream(destFile).use { output ->
                             input.copyTo(output)
@@ -43,7 +38,7 @@ object RawMusicExporter {
                     }
                     Log.d("Swapify", "✅ Exportada: $fileName")
                 } catch (e: Exception) {
-                    Log.e("Swapify", "❌ Error exportando $rawName: ${e.message}")
+                    Log.e("Swapify", "❌ Error exportando $fileName: ${e.message}")
                 }
             } else {
                 Log.d("Swapify", "⏭ Ya existe: $fileName")

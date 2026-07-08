@@ -16,6 +16,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
+import androidx.core.net.toUri
 import swapify.app.ui.theme.SwapifyRed
 import swapify.app.ui.theme.SwapifyRedBright
 import swapify.app.ui.theme.SwapifyRedDeep
@@ -28,46 +30,52 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.windowInsetsPadding
 
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        val serviceIntent = Intent(this, AudioService::class.java)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
+
+    private val audioPermission = if (android.os.Build.VERSION.SDK_INT >= 33) {
+        android.Manifest.permission.READ_MEDIA_AUDIO
+    } else {
+        android.Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+
+    private val permissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        if (results[audioPermission] == true) {
+            swapify.app.state.PlayerState.permissionGranted.value = true
+            swapify.app.utils.RawMusicExporter.exportIfNeeded(this)
         }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        startForegroundService(Intent(this, AudioService::class.java))
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        val permission = if (android.os.Build.VERSION.SDK_INT >= 33) {
-            android.Manifest.permission.READ_MEDIA_AUDIO
-        } else {
-            android.Manifest.permission.READ_EXTERNAL_STORAGE
+        fun granted(permission: String) =
+            androidx.core.content.ContextCompat.checkSelfPermission(this, permission) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+
+        if (granted(audioPermission)) {
+            swapify.app.utils.RawMusicExporter.exportIfNeeded(this)
         }
 
-        if (androidx.core.content.ContextCompat.checkSelfPermission(this, permission)
-            != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            androidx.core.app.ActivityCompat.requestPermissions(this, arrayOf(permission), 100)
-        } else {
-            swapify.app.utils.RawMusicExporter.exportIfNeeded(this)
+        // Además del permiso de audio, desde Android 13 las notificaciones (la
+        // del servicio y la multimedia) requieren su propio permiso de ejecución.
+        val missing = mutableListOf<String>()
+        if (!granted(audioPermission)) missing += audioPermission
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            !granted(android.Manifest.permission.POST_NOTIFICATIONS)
+        ) {
+            missing += android.Manifest.permission.POST_NOTIFICATIONS
+        }
+        if (missing.isNotEmpty()) {
+            permissionLauncher.launch(missing.toTypedArray())
         }
 
         setContent {
             SwapifyTheme {
                 SwapifyScreen()
             }
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 100 && grantResults.isNotEmpty() &&
-            grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            swapify.app.state.PlayerState.permissionGranted.value = true
-            swapify.app.utils.RawMusicExporter.exportIfNeeded(this)
         }
     }
 }
@@ -78,7 +86,7 @@ fun SwapifyScreen() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val openKofi = {
         context.startActivity(
-            Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://ko-fi.com/davidig6"))
+            Intent(Intent.ACTION_VIEW, "https://ko-fi.com/davidig6".toUri())
         )
     }
 
@@ -91,9 +99,7 @@ fun SwapifyScreen() {
         val firstLaunch = prefs.getBoolean("first_launch", true)
         if (firstLaunch) {
             showHelpPopup = true
-            val editor = prefs.edit()
-            editor.putBoolean("first_launch", false)
-            editor.apply()
+            prefs.edit { putBoolean("first_launch", false) }
         }
     }
 
