@@ -43,6 +43,7 @@ class AudioService : Service() {
     private var userAlarmVolumeWhileLocal: Int? = null
     private var alarmIndexSetOnMute: Int = -1
     private var lastOwnAlarmWriteAt = 0L
+    private var lastSpotifyBroadcastAt = 0L
 
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private val muteRunnable = Runnable {
@@ -70,6 +71,9 @@ class AudioService : Service() {
 
     private val spotifyReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            // Marca de vida de Spotify: la sonda de arranque la usa para saber
+            // si el audio activo era suyo antes de devolverle el PLAY.
+            lastSpotifyBroadcastAt = android.os.SystemClock.elapsedRealtime()
             val id = intent.getStringExtra("id") ?: return
             val length = intent.getIntExtra("length", 0)
             val position = intent.getIntExtra("playbackPosition", 0)
@@ -234,6 +238,51 @@ class AudioService : Service() {
             IntentFilter("android.media.VOLUME_CHANGED_ACTION"),
             RECEIVER_NOT_EXPORTED
         )
+
+        // Anuncio ya en curso al abrir la app: Spotify solo avisa en los cambios
+        // de estado, así que un arranque en mitad de un anuncio (o canción) nos
+        // dejaría ciegos hasta el siguiente cambio. Sonda: con audio activo se
+        // envía PAUSE a Spotify; si era él quien sonaba responde con un broadcast
+        // y se le devuelve PLAY, cuyo broadcast trae el id actual (anuncio →
+        // mute inmediato, canción → mute programado). Si sonaba otra app,
+        // Spotify no responde y no se envía PLAY, para no arrancarlo por
+        // accidente. Coste: un corte de <1 s al abrir.
+        if (audioManager.isMusicActive) {
+            handler.postDelayed({
+                val probeStart = android.os.SystemClock.elapsedRealtime()
+                // B leído con el audio aún sonando: es el volumen real del
+                // anuncio en curso. Tras el PAUSE, Spotify reajusta a veces su
+                // stream por su cuenta y el ContentObserver dejaría en B ese
+                // valor transitorio; mute() traspasaría entonces a la alarma
+                // un volumen que no es el que se estaba oyendo.
+                val liveMusicVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                pauseSpotify()
+                handler.postDelayed({
+                    when {
+                        // Respondió con broadcast: era una canción. El PLAY
+                        // provoca otro broadcast con el id y posición actuales,
+                        // que deja el mute programado para el final.
+                        lastSpotifyBroadcastAt >= probeStart -> playSpotify()
+
+                        // Sin broadcast pero el audio se detuvo: solo Spotify
+                        // recibió el PAUSE, así que era él sonando con algo que
+                        // no se anuncia — un anuncio (los anuncios no emiten
+                        // playbackstatechanged). Silenciar primero y reanudar
+                        // después, para que el anuncio vuelva ya en silencio y
+                        // al terminar llegue el broadcast de la siguiente
+                        // canción, que restaura el flujo normal.
+                        !audioManager.isMusicActive -> {
+                            Log.d("Swapify", "🔴 Anuncio en curso al abrir — silenciando")
+                            if (liveMusicVolume > 0) spotifyMusicVolume = liveMusicVolume
+                            if (!isMuted) mute()
+                            playSpotify()
+                        }
+
+                        else -> Log.d("Swapify", "🔎 Sin respuesta de Spotify — era otro reproductor")
+                    }
+                }, 1200)
+            }, 500)
+        }
     }
 
     // Los botones de la notificación (pre-Android 13) llegan como intents con
