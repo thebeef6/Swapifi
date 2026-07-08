@@ -52,7 +52,7 @@
     <string name="about_title">About Swapify</string>
     <string name="about_version">Swapify v1.0</string>
     <string name="about_description">Swapify mutes Spotify ads and plays your local music in the meantime.</string>
-    <string name="about_made_with">Made with ❤️ independently.</string>
+    <string name="about_made_with">Made with ❤️ by David Ibáñez.</string>
 
     <!-- Folder Picker -->
     <string name="folder_picker_choose">Choose this folder</string>

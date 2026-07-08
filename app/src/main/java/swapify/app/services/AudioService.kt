@@ -30,8 +30,27 @@ class AudioService : Service() {
     private var spotifyMusicVolume: Int = 0
     private var userAlarmVolumeWhileLocal: Int? = null
     private var alarmIndexSetOnMute: Int = -1
+    private var lastOwnAlarmWriteAt = 0L
 
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val muteRunnable = Runnable {
+        Log.d("Swapify", "🔴 Silenciando — posible anuncio")
+        mute()
+    }
+
+    // El sistema empuja el volumen de alarma (p. ej. a 3) justo después de que
+    // la restauración escriba un valor bajo, mientras el stream aún se está
+    // desactivando. Con el stream ya parado del todo, una segunda escritura sí
+    // se mantiene, así que reintentamos una única vez pasado un margen.
+    private val alarmReassertRunnable = Runnable {
+        if (isMuted) return@Runnable
+        val current = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
+        if (current != originalAlarmVolume) {
+            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, originalAlarmVolume, 0)
+            lastOwnAlarmWriteAt = android.os.SystemClock.elapsedRealtime()
+            Log.d("Swapify", "🔁 Sistema dejó la alarma en $current — reintentando A: $originalAlarmVolume")
+        }
+    }
     private lateinit var audioManager: AudioManager
     private lateinit var localPlayer: swapify.app.player.LocalPlayer
     private lateinit var volumeObserver: ContentObserver
@@ -59,7 +78,10 @@ class AudioService : Service() {
                     swapify.app.state.PlayerState.isSpotifyPlaying.value = true
                 }
 
-                handler.removeCallbacksAndMessages(null)
+                // Cancela solo el mute pendiente: un removeCallbacksAndMessages(null)
+                // aquí borraría también las notificaciones pendientes del
+                // ContentObserver (B/C) y el playSpotify() diferido de 300 ms.
+                handler.removeCallbacks(muteRunnable)
 
                 // Estos broadcasts no están protegidos: cualquier app puede
                 // falsificar los extras. Sin esta validación, un length/position
@@ -76,15 +98,42 @@ class AudioService : Service() {
                 if (capturedB > 0) spotifyMusicVolume = capturedB
                 Log.d("Swapify", "🟢 Canción | Tiempo restante: ${timeLeft}ms | B capturado: $spotifyMusicVolume")
 
-                handler.postDelayed({
-                    Log.d("Swapify", "🔴 Silenciando — posible anuncio")
-                    mute()
-                }, timeLeft)
+                handler.postDelayed(muteRunnable, timeLeft)
 
             } else if (id.startsWith("spotify:ad:") || id.isEmpty()) {
                 swapify.app.state.PlayerState.isSpotifyPlaying.value = false
                 Log.d("Swapify", "🔴 Anuncio — manteniendo silencio")
                 if (!isMuted) mute()
+            }
+        }
+    }
+
+    // A diferencia del ContentObserver (que se dispara por cualquier ajuste del
+    // sistema y RELEE los volúmenes, pudiendo pillar lecturas transitorias justo
+    // al desactivarse el stream de alarma), este broadcast trae el stream y el
+    // valor exactos del cambio real, así que A no puede corromperse con valores
+    // fantasma.
+    private val volumeChangedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val stream = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1)
+            if (stream != AudioManager.STREAM_ALARM) return
+            val value = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_VALUE", -1)
+            if (value < 0) return
+            // Justo tras escribir nosotros la alarma, el sistema puede reajustarla
+            // por su cuenta (p. ej. empujándola a 3 al desactivarse el stream) y
+            // ese eco llegaría aquí como si fuera un cambio del usuario,
+            // corrompiendo A. Los eventos de esa ventana se ignoran; el reintento
+            // diferido se encarga de volver a imponer A después.
+            if (android.os.SystemClock.elapsedRealtime() - lastOwnAlarmWriteAt < 1000) {
+                Log.d("Swapify", "📊 Eco de escritura propia ignorado (alarma=$value)")
+                return
+            }
+            // Con Spotify sonando, el volumen de alarma que fija el usuario pasa
+            // a ser el que se restaura al volver de la música local (A). Durante
+            // el silenciado los cambios van a C via ContentObserver, como antes.
+            if (!isMuted && value != originalAlarmVolume) {
+                originalAlarmVolume = value
+                Log.d("Swapify", "📊 A actualizado: $originalAlarmVolume")
             }
         }
     }
@@ -138,6 +187,13 @@ class AudioService : Service() {
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification(getString(swapify.app.R.string.notification_active)))
         registerSpotifyReceiver()
+        // NOT_EXPORTED: los broadcasts del sistema llegan igualmente y ninguna
+        // app de terceros puede falsificarlos para manipular A.
+        registerReceiver(
+            volumeChangedReceiver,
+            IntentFilter("android.media.VOLUME_CHANGED_ACTION"),
+            RECEIVER_NOT_EXPORTED
+        )
     }
 
     override fun onDestroy() {
@@ -145,6 +201,7 @@ class AudioService : Service() {
         handler.removeCallbacksAndMessages(null)
         if (isMuted) unmute()
         unregisterReceiver(spotifyReceiver)
+        unregisterReceiver(volumeChangedReceiver)
         contentResolver.unregisterContentObserver(volumeObserver)
     }
 
@@ -248,8 +305,10 @@ class AudioService : Service() {
         val relativeVolume = spotifyMusicVolume.toFloat() / maxMusic.toFloat()
 
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0)
+        handler.removeCallbacks(alarmReassertRunnable)
         alarmIndexSetOnMute = (relativeVolume * maxAlarm).roundToInt()
         audioManager.setStreamVolume(AudioManager.STREAM_ALARM, alarmIndexSetOnMute, 0)
+        lastOwnAlarmWriteAt = android.os.SystemClock.elapsedRealtime()
         Log.d("Swapify", "🔴 Muteando | B: $spotifyMusicVolume | Alarma ajustada: $alarmIndexSetOnMute")
 
         if (swapify.app.state.PlayerState.playlist.isEmpty()) {
@@ -308,7 +367,11 @@ class AudioService : Service() {
 
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newMusicVolume, 0)
         audioManager.setStreamVolume(AudioManager.STREAM_ALARM, originalAlarmVolume, 0)
+        lastOwnAlarmWriteAt = android.os.SystemClock.elapsedRealtime()
         userAlarmVolumeWhileLocal = null
+
+        handler.removeCallbacks(alarmReassertRunnable)
+        handler.postDelayed(alarmReassertRunnable, 1500)
 
         Log.d("Swapify", "🟢 Restaurando | Música: $newMusicVolume | Alarma: $originalAlarmVolume")
     }
