@@ -1,4 +1,4 @@
-package swapify.app.ui
+package swapifi.app.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -7,7 +7,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.stringResource
-import swapify.app.R
+import swapifi.app.R
 @Composable
 fun ContactPopup(onDismiss: () -> Unit) {
     AlertDialog(

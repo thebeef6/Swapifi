@@ -1,4 +1,4 @@
-package swapify.app
+package swapifi.app
 
 import android.content.Intent
 import android.os.Bundle
@@ -18,14 +18,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.core.net.toUri
-import swapify.app.ui.theme.SwapifyRed
-import swapify.app.ui.theme.SwapifyRedBright
-import swapify.app.ui.theme.SwapifyRedDeep
-import swapify.app.services.AudioService
-import swapify.app.ui.SwapifyTopBar
-import swapify.app.ui.FileExplorerSection
-import swapify.app.ui.PlayerSection
-import swapify.app.ui.theme.SwapifyTheme
+import swapifi.app.ui.theme.SwapifiRed
+import swapifi.app.ui.theme.SwapifiRedBright
+import swapifi.app.ui.theme.SwapifiRedDeep
+import swapifi.app.services.AudioService
+import swapifi.app.ui.SwapifiTopBar
+import swapifi.app.ui.FileExplorerSection
+import swapifi.app.ui.PlayerSection
+import swapifi.app.ui.theme.SwapifiTheme
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.windowInsetsPadding
 
@@ -41,8 +41,8 @@ class MainActivity : ComponentActivity() {
         androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
         if (results[audioPermission] == true) {
-            swapify.app.state.PlayerState.permissionGranted.value = true
-            swapify.app.utils.RawMusicExporter.exportIfNeeded(this)
+            swapifi.app.state.PlayerState.permissionGranted.value = true
+            swapifi.app.utils.RawMusicExporter.exportIfNeeded(this)
         }
     }
 
@@ -56,7 +56,7 @@ class MainActivity : ComponentActivity() {
                 android.content.pm.PackageManager.PERMISSION_GRANTED
 
         if (granted(audioPermission)) {
-            swapify.app.utils.RawMusicExporter.exportIfNeeded(this)
+            swapifi.app.utils.RawMusicExporter.exportIfNeeded(this)
         }
 
         // Además del permiso de audio, desde Android 13 las notificaciones (la
@@ -73,15 +73,15 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            SwapifyTheme {
-                SwapifyScreen()
+            SwapifiTheme {
+                SwapifiScreen()
             }
         }
     }
 }
 
 @Composable
-fun SwapifyScreen() {
+fun SwapifiScreen() {
     var showHelpPopup by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val openKofi = {
@@ -91,11 +91,11 @@ fun SwapifyScreen() {
     }
 
     LaunchedEffect(Unit) {
-        swapify.app.state.PlayerState.loadSelectedFolder(context)
+        swapifi.app.state.PlayerState.loadSelectedFolder(context)
     }
 
     LaunchedEffect(Unit) {
-        val prefs = context.getSharedPreferences("Swapify_prefs", android.content.Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("Swapifi_prefs", android.content.Context.MODE_PRIVATE)
         val firstLaunch = prefs.getBoolean("first_launch", true)
         if (firstLaunch) {
             showHelpPopup = true
@@ -105,7 +105,7 @@ fun SwapifyScreen() {
 
     Scaffold(
         topBar = {
-            SwapifyTopBar(
+            SwapifiTopBar(
                 onDonateClick = openKofi,
                 onHelpClick = { showHelpPopup = true }
             )
@@ -132,7 +132,7 @@ fun SwapifyScreen() {
                         .background(
                             // Simétrico: oscuro en los extremos, carmesí en el centro
                             Brush.horizontalGradient(
-                                listOf(SwapifyRedDeep, SwapifyRed, SwapifyRedBright, SwapifyRed, SwapifyRedDeep)
+                                listOf(SwapifiRedDeep, SwapifiRed, SwapifiRedBright, SwapifiRed, SwapifiRedDeep)
                             )
                         )
                         .padding(vertical = 12.dp),
@@ -152,29 +152,29 @@ fun SwapifyScreen() {
                 .padding(innerPadding)
         ) {
             PlayerSection(
-                statusText = if (swapify.app.state.PlayerState.isPlayingLocal.value)
+                statusText = if (swapifi.app.state.PlayerState.isPlayingLocal.value)
                     stringResource(R.string.status_ad_detected)
                 else
                     stringResource(R.string.status_playing_spotify),
-                songTitle = swapify.app.state.PlayerState.currentSongName.value,
+                songTitle = swapifi.app.state.PlayerState.currentSongName.value,
                 songArtist = "",
-                isPlayingLocal = swapify.app.state.PlayerState.isPlayingLocal.value,
+                isPlayingLocal = swapifi.app.state.PlayerState.isPlayingLocal.value,
                 onPlayPause = {
-                    if (swapify.app.state.PlayerState.isPlayingLocal.value) {
-                        swapify.app.state.PlayerState.pause()
+                    if (swapifi.app.state.PlayerState.isPlayingLocal.value) {
+                        swapifi.app.state.PlayerState.pause()
                     } else {
-                        swapify.app.state.PlayerState.resume()
+                        swapifi.app.state.PlayerState.resume()
                     }
                 },
-                onNext = { swapify.app.state.PlayerState.next() },
-                onPrevious = { swapify.app.state.PlayerState.previous() }
+                onNext = { swapifi.app.state.PlayerState.next() },
+                onPrevious = { swapifi.app.state.PlayerState.previous() }
             )
             FileExplorerSection()
         }
     }
 
     if (showHelpPopup) {
-        swapify.app.ui.HelpPopup(
+        swapifi.app.ui.HelpPopup(
             onDismiss = { showHelpPopup = false }
         )
     }

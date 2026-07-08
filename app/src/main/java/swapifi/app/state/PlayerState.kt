@@ -1,4 +1,4 @@
-package swapify.app.state
+package swapifi.app.state
 
 import android.content.Context
 import androidx.core.content.edit
@@ -19,7 +19,7 @@ object PlayerState {
     var onResumeRequested: (() -> Boolean)? = null
     var localPosition = androidx.compose.runtime.mutableLongStateOf(0L)
     var localDuration = androidx.compose.runtime.mutableLongStateOf(0L)
-    var localPlayerRef: swapify.app.player.LocalPlayer? = null
+    var localPlayerRef: swapifi.app.player.LocalPlayer? = null
     var isSpotifyPlaying = androidx.compose.runtime.mutableStateOf(false)
     fun setPlaylist(files: List<File>, startIndex: Int = 0) {
         playlist = files
@@ -28,19 +28,19 @@ object PlayerState {
 
     fun setSelectedFolder(context: Context, folderPath: String) {
         selectedFolder.value = folderPath
-        val prefs = context.getSharedPreferences("Swapify_prefs", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("Swapifi_prefs", Context.MODE_PRIVATE)
         prefs.edit { putString("selected_folder", folderPath) }
     }
 
     fun loadSelectedFolder(context: Context) {
-        val prefs = context.getSharedPreferences("Swapify_prefs", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("Swapifi_prefs", Context.MODE_PRIVATE)
         // Primera ejecución (sin carpeta guardada): se abre directamente en la
-        // carpeta Music/Swapify con las canciones que exporta la app, para que
+        // carpeta Music/Swapifi con las canciones que exporta la app, para que
         // el usuario vea contenido desde el primer momento. Puede cambiarla
         // después; su elección queda guardada y aquí se respeta.
         val defaultFolder = java.io.File(
             android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_MUSIC),
-            "Swapify"
+            "Swapifi"
         ).absolutePath
         selectedFolder.value = prefs.getString("selected_folder", defaultFolder) ?: defaultFolder
     }

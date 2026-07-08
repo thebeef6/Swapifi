@@ -1,4 +1,4 @@
-package swapify.app.ui
+package swapifi.app.ui
 
 import android.content.Context
 import android.provider.MediaStore
@@ -23,7 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.io.File
-import swapify.app.R
+import swapifi.app.R
 data class AudioFile(val file: File, val title: String)
 
 fun getAudioFiles(context: Context, folder: String): List<AudioFile> {
@@ -57,8 +57,8 @@ fun getAudioFiles(context: Context, folder: String): List<AudioFile> {
 fun FileExplorerSection() {
     val context = LocalContext.current
     var songs by remember { mutableStateOf<List<AudioFile>>(emptyList()) }
-    val permissionGranted = swapify.app.state.PlayerState.permissionGranted.value
-    val selectedFolder = swapify.app.state.PlayerState.selectedFolder.value
+    val permissionGranted = swapifi.app.state.PlayerState.permissionGranted.value
+    val selectedFolder = swapifi.app.state.PlayerState.selectedFolder.value
 
     LaunchedEffect(permissionGranted, selectedFolder) {
         songs = getAudioFiles(context, selectedFolder)
@@ -81,16 +81,16 @@ fun FileExplorerSection() {
             )
         }
 
-        val selectionEnabled = !swapify.app.state.PlayerState.isSpotifyPlaying.value
+        val selectionEnabled = !swapifi.app.state.PlayerState.isSpotifyPlaying.value
 
         LazyColumn(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(songs) { song ->
-                val isCurrent = swapify.app.state.PlayerState.isPlayingLocal.value &&
-                    swapify.app.state.PlayerState.playlist
-                        .getOrNull(swapify.app.state.PlayerState.currentIndex) == song.file
+                val isCurrent = swapifi.app.state.PlayerState.isPlayingLocal.value &&
+                    swapifi.app.state.PlayerState.playlist
+                        .getOrNull(swapifi.app.state.PlayerState.currentIndex) == song.file
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -104,9 +104,9 @@ fun FileExplorerSection() {
                         .clickable(enabled = selectionEnabled) {
                             val playlist = songs.map { it.file }
                             val startIndex = songs.indexOf(song)
-                            swapify.app.state.PlayerState.setPlaylist(playlist, startIndex)
-                            swapify.app.state.PlayerState.playCurrentWithVolume(
-                                swapify.app.state.PlayerState.localPlayerRef?.localVolume?.value ?: 1f
+                            swapifi.app.state.PlayerState.setPlaylist(playlist, startIndex)
+                            swapifi.app.state.PlayerState.playCurrentWithVolume(
+                                swapifi.app.state.PlayerState.localPlayerRef?.localVolume?.value ?: 1f
                             )
                         }
                         .padding(horizontal = 12.dp, vertical = 10.dp)

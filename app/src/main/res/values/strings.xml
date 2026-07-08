@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Swapify</string>
+    <string name="app_name">Swapifi</string>
 
     <!-- TopBar -->
     <string name="menu_settings">Settings</string>
@@ -23,11 +23,11 @@
     <string name="close">Close</string>
 
     <!-- Help -->
-    <string name="help_title">Set up Swapify</string>
-    <string name="help_intro">To make Swapify work correctly, follow these steps:</string>
+    <string name="help_title">Set up Swapifi</string>
+    <string name="help_intro">To make Swapifi work correctly, follow these steps:</string>
     <string name="help_step1">1. Grant the music and audio permission and the notification permission when prompted</string>
-    <string name="help_step2">2. Disable battery optimization for Swapify in your system settings</string>
-    <string name="help_step3">3. Keep Swapify running in the background while using Spotify</string>
+    <string name="help_step2">2. Disable battery optimization for Swapifi in your system settings</string>
+    <string name="help_step3">3. Keep Swapifi running in the background while using Spotify</string>
     <string name="help_step4">4. While your local music is playing, you can turn its volume up or down with the alarm volume (the phone\'s volume buttons)</string>
     <string name="understood">Got it</string>
 
@@ -41,7 +41,7 @@
     <string name="bug_title">Report a bug</string>
     <string name="bug_description">Describe the issue you found:</string>
     <string name="bug_placeholder">E.g: music doesn\'t mute when the ad starts…</string>
-    <string name="bug_email_subject">Bug report - Swapify</string>
+    <string name="bug_email_subject">Bug Swapifi</string>
     <string name="send">Send</string>
     <string name="cancel">Cancel</string>
 
@@ -50,9 +50,9 @@
     <string name="contact_message">Do you have any questions or suggestions?</string>
 
     <!-- About -->
-    <string name="about_title">About Swapify</string>
-    <string name="about_version">Swapify v1.0</string>
-    <string name="about_description">Swapify mutes Spotify ads and plays your local music in the meantime.</string>
+    <string name="about_title">About Swapifi</string>
+    <string name="about_version">Swapifi v1.0</string>
+    <string name="about_description">Swapifi mutes Spotify ads and plays your local music in the meantime.</string>
     <string name="about_made_with">Made with ❤️ by David Ibáñez.</string>
 
     <!-- Folder Picker -->
@@ -60,6 +60,6 @@
     <string name="folder_picker_back">Back</string>
 
     <!-- Service notification -->
-    <string name="notification_active">Swapify active</string>
+    <string name="notification_active">Swapifi active</string>
     <string name="notification_local_playing">Local music</string>
 </resources>

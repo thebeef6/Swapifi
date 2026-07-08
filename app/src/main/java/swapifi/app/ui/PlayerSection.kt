@@ -1,4 +1,4 @@
-package swapify.app.ui
+package swapifi.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -26,9 +26,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import swapify.app.R
-import swapify.app.ui.theme.SwapifyRed
-import swapify.app.ui.theme.SwapifyRedBright
+import swapifi.app.R
+import swapifi.app.ui.theme.SwapifiRed
+import swapifi.app.ui.theme.SwapifiRedBright
 import kotlin.math.roundToInt
 
 fun formatTime(ms: Long): String {
@@ -48,10 +48,10 @@ fun PlayerSection(
     onNext: () -> Unit = {},
     onPrevious: () -> Unit = {}
 ) {
-    val player = swapify.app.state.PlayerState.localPlayerRef
+    val player = swapifi.app.state.PlayerState.localPlayerRef
     val position = player?.currentPosition?.value ?: 0L
     val duration = player?.duration?.value ?: 0L
-    val controlsEnabled = !swapify.app.state.PlayerState.isSpotifyPlaying.value
+    val controlsEnabled = !swapifi.app.state.PlayerState.isSpotifyPlaying.value
 
     Column(
         modifier = Modifier
@@ -69,7 +69,7 @@ fun PlayerSection(
             .padding(horizontal = 20.dp, vertical = 22.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Chip de estado con punto de color: verde Spotify / rojo Swapify
+        // Chip de estado con punto de color: verde Spotify / rojo Swapifi
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(50))
@@ -81,7 +81,7 @@ fun PlayerSection(
                 modifier = Modifier
                     .size(8.dp)
                     .clip(CircleShape)
-                    .background(if (isPlayingLocal) SwapifyRedBright else Color(0xFF1DB954))
+                    .background(if (isPlayingLocal) SwapifiRedBright else Color(0xFF1DB954))
             )
             Spacer(Modifier.width(8.dp))
             Text(
@@ -112,7 +112,7 @@ fun PlayerSection(
 
         Spacer(Modifier.height(18.dp))
 
-        SwapifySeekBar(
+        SwapifiSeekBar(
             position = position,
             duration = duration,
             enabled = controlsEnabled && duration > 0,
@@ -169,7 +169,7 @@ fun PlayerSection(
 // pulgar deslizable. A diferencia del Slider anterior, permite hacer seek
 // arrastrando o tocando la pista.
 @Composable
-private fun SwapifySeekBar(
+private fun SwapifiSeekBar(
     position: Long,
     duration: Long,
     enabled: Boolean,
@@ -231,7 +231,7 @@ private fun SwapifySeekBar(
                         .fillMaxWidth(fraction)
                         .height(6.dp)
                         .clip(RoundedCornerShape(3.dp))
-                        .background(Brush.horizontalGradient(listOf(SwapifyRed, SwapifyRedBright)))
+                        .background(Brush.horizontalGradient(listOf(SwapifiRed, SwapifiRedBright)))
                 )
             }
             if (enabled) {
@@ -241,7 +241,7 @@ private fun SwapifySeekBar(
                         .offset { IntOffset(((trackWidthPx - thumbPx) * fraction).roundToInt(), 0) }
                         .size(thumbSize)
                         .clip(CircleShape)
-                        .background(SwapifyRedBright)
+                        .background(SwapifiRedBright)
                 )
             }
         }

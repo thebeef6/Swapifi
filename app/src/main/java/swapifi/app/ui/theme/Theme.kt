@@ -1,4 +1,4 @@
-package swapify.app.ui.theme
+package swapifi.app.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -12,13 +12,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = SwapifyRedBright,
+    primary = SwapifiRedBright,
     onPrimary = Color.White,
-    primaryContainer = SwapifyRedDeep,
+    primaryContainer = SwapifiRedDeep,
     onPrimaryContainer = Color(0xFFFFD9DE),
-    secondary = SwapifySilver,
+    secondary = SwapifiSilver,
     onSecondary = Color(0xFF2A2D31),
-    tertiary = SwapifyRed,
+    tertiary = SwapifiRed,
     background = DarkBackground,
     onBackground = Color(0xFFF2E7E9),
     surface = DarkSurface,
@@ -28,12 +28,12 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = SwapifyRed,
+    primary = SwapifiRed,
     onPrimary = Color.White,
     primaryContainer = Color(0xFFFFD9DE),
     onPrimaryContainer = Color(0xFF40000D),
     secondary = Color(0xFF75565C),
-    tertiary = SwapifyRedDeep,
+    tertiary = SwapifiRedDeep,
     background = LightBackground,
     onBackground = Color(0xFF201A1B),
     surface = LightSurface,
@@ -43,7 +43,7 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun SwapifyTheme(
+fun SwapifiTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Desactivado por defecto: el color dinámico de Android 12+ pisaría el
     // rojo de marca del icono con los colores del fondo de pantalla del usuario.

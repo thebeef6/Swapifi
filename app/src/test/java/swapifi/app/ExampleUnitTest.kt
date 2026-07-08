@@ -1,4 +1,4 @@
-package swapify.app
+package swapifi.app
 
 import org.junit.Test
 

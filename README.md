@@ -1,6 +1,6 @@
-# 🎵 Swapify
+# 🎵 Swapifi
 
-Swapify detecta los anuncios de Spotify y reproduce tu música local mientras tanto, silenciando Spotify automáticamente y reanudándolo cuando el anuncio termina.
+Swapifi detecta los anuncios de Spotify y reproduce tu música local mientras tanto, silenciando Spotify automáticamente y reanudándolo cuando el anuncio termina.
 
 ## ¿Qué hace?
 
