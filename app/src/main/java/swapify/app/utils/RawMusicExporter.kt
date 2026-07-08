@@ -15,10 +15,6 @@ object RawMusicExporter {
         "two_things" to "Two Things - Anno Domini Beats.mp3"
     )
 
-    // Canciones exportadas por versiones anteriores de la app: se retiran para
-    // que no convivan con las nuevas en Music/Swapify.
-    private val obsoleteFiles = listOf("Musica 1.mp3", "Musica 2.mp3", "Musica 3.mp3")
-
     fun exportIfNeeded(context: Context) {
         val SwapifyFolder = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),
@@ -30,16 +26,6 @@ object RawMusicExporter {
         }
 
         val filesToScan = mutableListOf<String>()
-
-        for (oldName in obsoleteFiles) {
-            val oldFile = File(SwapifyFolder, oldName)
-            if (oldFile.exists() && oldFile.delete()) {
-                // Reescanear el archivo ya borrado hace que MediaStore retire
-                // su entrada; sin esto seguiría listado en la app.
-                filesToScan.add(oldFile.absolutePath)
-                Log.d("Swapify", "🗑 Retirada canción antigua: $oldName")
-            }
-        }
 
         for ((rawName, fileName) in songs) {
             val destFile = File(SwapifyFolder, fileName)
