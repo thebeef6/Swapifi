@@ -39,10 +39,10 @@ fun SwapifyTopBar(
     var showContact by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
 
-    // Easter egg: 6 toques seguidos sobre el icono muestran "Dfy"
+    // Easter egg: 6 toques seguidos sobre el icono muestran "Dufy"
     var iconTaps by remember { mutableStateOf(0) }
     var lastTapAt by remember { mutableStateOf(0L) }
-    var showDfy by remember { mutableStateOf(false) }
+    var showDufy by remember { mutableStateOf(false) }
 
     TopAppBar(
         navigationIcon = {
@@ -65,7 +65,7 @@ fun SwapifyTopBar(
                         lastTapAt = now
                         if (iconTaps >= 6) {
                             iconTaps = 0
-                            showDfy = true
+                            showDufy = true
                         }
                     }
             )
@@ -115,11 +115,11 @@ fun SwapifyTopBar(
     if (showBugReport) BugReportPopup(onDismiss = { showBugReport = false })
     if (showContact) ContactPopup(onDismiss = { showContact = false })
     if (showAbout) AboutPopup(onDismiss = { showAbout = false })
-    if (showDfy) DfyEasterEgg(onDismiss = { showDfy = false })
+    if (showDufy) DufyEasterEgg(onDismiss = { showDufy = false })
 }
 
 @Composable
-private fun DfyEasterEgg(onDismiss: () -> Unit) {
+private fun DufyEasterEgg(onDismiss: () -> Unit) {
     // Se desvanece solo pasados unos segundos, como un guiño fugaz
     LaunchedEffect(Unit) {
         delay(2500)
@@ -139,7 +139,7 @@ private fun DfyEasterEgg(onDismiss: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Dfy",
+                text = "Dufy",
                 fontSize = 64.sp,
                 fontWeight = FontWeight.Black,
                 color = Color.White

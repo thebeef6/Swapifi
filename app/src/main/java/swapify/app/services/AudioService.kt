@@ -75,7 +75,23 @@ class AudioService : Service() {
             val position = intent.getIntExtra("playbackPosition", 0)
             val playing = intent.getBooleanExtra("playing", false)
 
-            if (!playing) return
+            if (!playing) {
+                // Pausa manual de Spotify a mitad de canción: sin esto, el mute
+                // programado al llegar la canción seguiría armado y dispararía
+                // la música local a la hora en que la canción habría terminado.
+                // Solo se cancela lejos del final (>3 s) y con posición real
+                // (>1 s): un playing=false pegado al final o con posición 0 es
+                // indistinguible de la transición canción→anuncio, y ahí el
+                // temporizador debe seguir vivo para silenciar el anuncio.
+                if (!isMuted && id.startsWith("spotify:track:") &&
+                    length > 0 && position > 1000 && length - position > 3000
+                ) {
+                    handler.removeCallbacks(muteRunnable)
+                    swapify.app.state.PlayerState.isSpotifyPlaying.value = false
+                    Log.d("Swapify", "⏸ Pausa manual de Spotify — mute cancelado (pos=$position/$length)")
+                }
+                return
+            }
 
             if (id.startsWith("spotify:track:")) {
                 if (isMuted) {

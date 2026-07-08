@@ -42,7 +42,7 @@ utils/RawMusicExporter.kt     → exporta canciones de raw/ a Music/Swapify/ al 
 ui/MainActivity.kt            → pantalla principal
 ui/PlayerSection.kt           → reproductor con barra de progreso y controles
 ui/FileExplorerSection.kt     → lista de canciones filtrada por carpeta
-ui/DufyTopBar.kt              → barra superior con menús
+ui/TopBar.kt                  → barra superior con menús
 ui/DonatePopup.kt             → donaciones via Ko-fi
 ui/HelpPopup.kt               → ayuda primer uso
 ui/SettingsPopup.kt           → ajustes (carpeta de música)
