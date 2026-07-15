@@ -211,7 +211,16 @@ class AudioService : Service() {
 
         swapifi.app.state.PlayerState.onPlayRequested = { file ->
             val uri = android.net.Uri.fromFile(file)
-            localPlayer.play(uri, 1f)
+            // Reproducción manual (next/previous/resume): aquí no hay un mute()
+            // previo que haya escrito el índice de alarma, así que se pasa la
+            // fracción del índice actual. Con 1f fijo, LocalPlayer concluiría
+            // que el índice no manda (indexControlsGain=false) y los botones de
+            // volumen meterían atenuación doble vía player.volume.
+            val maxAlarm = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+            val fraction = if (maxAlarm > 0) {
+                audioManager.getStreamVolume(AudioManager.STREAM_ALARM).toFloat() / maxAlarm
+            } else 1f
+            localPlayer.play(uri, fraction)
             updateMediaNotification()
         }
         swapifi.app.state.PlayerState.onPlayRequestedWithVolume = { file, volume ->
@@ -411,12 +420,14 @@ class AudioService : Service() {
         val maxAlarm = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
         val relativeVolume = spotifyMusicVolume.toFloat() / maxMusic.toFloat()
 
+        logBtVolumeDiagnostics("antes de mutear")
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0)
         handler.removeCallbacks(alarmReassertRunnable)
         alarmIndexSetOnMute = (relativeVolume * maxAlarm).roundToInt()
         audioManager.setStreamVolume(AudioManager.STREAM_ALARM, alarmIndexSetOnMute, 0)
         lastOwnAlarmWriteAt = android.os.SystemClock.elapsedRealtime()
         Log.d("Swapifi", "🔴 Muteando | B: $spotifyMusicVolume | Alarma ajustada: $alarmIndexSetOnMute")
+        logBtVolumeDiagnostics("tras mutear")
 
         if (swapifi.app.state.PlayerState.playlist.isEmpty()) {
             val songs = loadSongsFromFolder()
@@ -463,6 +474,46 @@ class AudioService : Service() {
         swapifi.app.state.PlayerState.isSpotifyPlaying.value = true
         updateMediaNotification()
 
+    }
+
+    // Diagnóstico del bug "música local atenuada en BT": deja en el log los
+    // índices visibles, los persistidos por dispositivo BT y las curvas en dB,
+    // para ver si el 0 de STREAM_MUSIC arrastra el volumen absoluto A2DP.
+    private fun logBtVolumeDiagnostics(momento: String) {
+        try {
+            val musicIdx = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+            val alarmIdx = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
+            val btMusic = try {
+                Settings.System.getInt(contentResolver, "volume_music_bt_a2dp")
+            } catch (e: Exception) {
+                null
+            }
+            val btAlarm = try {
+                Settings.System.getInt(contentResolver, "volume_alarm_bt_a2dp")
+            } catch (e: Exception) {
+                null
+            }
+            var curvas = ""
+            if (android.os.Build.VERSION.SDK_INT >= 28) {
+                curvas = try {
+                    val btDev = android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP
+                    val musicDb = audioManager.getStreamVolumeDb(AudioManager.STREAM_MUSIC, musicIdx, btDev)
+                    val alarmDb = audioManager.getStreamVolumeDb(
+                        AudioManager.STREAM_ALARM, btAlarm ?: alarmIdx, btDev
+                    )
+                    " | curva BT: música=${"%.1f".format(musicDb)}dB alarma=${"%.1f".format(alarmDb)}dB"
+                } catch (e: Exception) {
+                    " | curva BT no disponible: ${e.message}"
+                }
+            }
+            Log.d(
+                "Swapifi",
+                "🔬 [$momento] música=$musicIdx alarma=$alarmIdx | " +
+                    "BT persistido: música=${btMusic ?: "—"} alarma=${btAlarm ?: "—"}$curvas"
+            )
+        } catch (e: Exception) {
+            Log.w("Swapifi", "⚠ Diagnóstico de volúmenes falló: ${e.message}")
+        }
     }
 
     private fun restoreSpotifyVolumes() {

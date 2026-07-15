@@ -62,6 +62,13 @@ ui/FolderPickerPopup.kt       → selector de carpeta
 
 ### 🔴 Importantes
 - Música local suena simultáneamente por auriculares Bluetooth Y por el altavoz — STREAM_ALARM ignora el routing de audio
+- Música local atenuada en auriculares BT (diagnosticado 15-jul-2026, verificado en MIUI): la causa es el índice de alarma del dispositivo BT (`volume_alarm_bt_a2dp`), que con valores bajos mete atenuaciones de −40dB que el boost (capado a +36dB, con compresión del limitador) no puede tapar del todo. Verificado en dispositivo:
+    - El panel de volumen de MIUI SÍ escribe el índice BT, pero **solo mientras la música local está sonando por BT**; con el índice a 15 la atenuación baja a −9dB, el boost queda en ~700mB y suena bien (confirmado por el usuario)
+    - Escribir `volume_alarm_bt_a2dp` con `settings put` NO sobrevive a la reconexión (el audioserver re-persiste su valor en memoria)
+    - Los `setStreamVolume(STREAM_ALARM)` de la app en `mute()` van al índice del altavoz porque se ejecutan ANTES de que el stream esté activo en BT — sin probar aún: re-asertar la escritura CON la reproducción ya activa podría escribir el índice BT como hace el panel
+    - `STREAM_MUSIC=0` NO afecta al volumen absoluto A2DP en este dispositivo (descartado)
+    - `LocalPlayer` recalibra el boost en vivo cada 500ms si el índice BT cambia, y acota el índice a `getStreamMinVolume` (a índice 1 `getStreamVolumeDb` lanza "Invalid stream volume index")
+    - Pendiente de decidir: automatizar la subida del índice de alarma BT durante la reproducción local vs. mostrar un aviso al usuario para que suba el slider de alarma una vez
 
 ### 🟡 Cambios mínimos
 - Cambiar emails placeholder en ContactPopup.kt y BugReportPopup.kt
