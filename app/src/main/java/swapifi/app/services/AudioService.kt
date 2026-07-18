@@ -34,10 +34,25 @@ class AudioService : Service() {
         private const val ACTION_PAUSE = "swapifi.app.action.PAUSE"
         private const val ACTION_NEXT = "swapifi.app.action.NEXT"
         private const val ACTION_PREVIOUS = "swapifi.app.action.PREVIOUS"
+
+        // Los broadcasts de la siguiente canción suelen llegar justo en la
+        // transición; disparar un poco después del final previsto deja que el
+        // removeCallbacks del receiver cancele el temporizador en la mayoría de
+        // transiciones normales. Coste: un anuncio real suena este margen antes
+        // de silenciarse.
+        private const val MUTE_MARGIN_MS = 300L
+        // Ventana de confirmación de anuncio: Spotify emite el broadcast de la
+        // siguiente canción en <1 s normalmente; si no llega en este margen,
+        // era un anuncio de verdad.
+        private const val AD_CONFIRM_WINDOW_MS = 1300L
     }
 
     private var isMuted = false
     private var isMuting = false
+    // Fase 1 del mute en dos fases: Spotify ya está a 0 pero la música local
+    // aún no ha arrancado, a la espera de confirmar que es un anuncio.
+    // Invariante: nunca true a la vez que isMuted.
+    private var pendingAdConfirmation = false
     private var waitingForLocalSongToEnd = false
     private var originalAlarmVolume: Int = 0
     private var spotifyMusicVolume: Int = 0
@@ -48,7 +63,25 @@ class AudioService : Service() {
 
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private val muteRunnable = Runnable {
-        Log.d("Swapifi", "🔴 Silenciando — posible anuncio")
+        Log.d("Swapifi", "🟠 Fin de canción previsto — silenciando y esperando confirmación")
+        startPendingMute()
+    }
+
+    // Fase 2: si en toda la ventana no llegó el broadcast de la siguiente
+    // canción, era un anuncio de verdad — mute completo con música local.
+    private val confirmAdRunnable = Runnable {
+        if (!pendingAdConfirmation) return@Runnable
+        pendingAdConfirmation = false
+        // Fin de cola: no hay anuncio ni canción sonando, así que arrancar la
+        // música local dejaría al usuario con ella indefinidamente (nada la
+        // desmutearía). isMusicActive no depende del volumen, así que un
+        // anuncio activo con el stream a 0 no se cuela por aquí.
+        if (!audioManager.isMusicActive) {
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, spotifyMusicVolume, 0)
+            Log.d("Swapifi", "🔎 Nada sonando tras la ventana — cola terminada, sin música local")
+            return@Runnable
+        }
+        Log.d("Swapifi", "🔴 Sin canción nueva tras la ventana — anuncio confirmado")
         mute()
     }
 
@@ -92,6 +125,7 @@ class AudioService : Service() {
                     length > 0 && position > 1000 && length - position > 3000
                 ) {
                     handler.removeCallbacks(muteRunnable)
+                    cancelPendingMute()
                     swapifi.app.state.PlayerState.isSpotifyPlaying.value = false
                     Log.d("Swapifi", "⏸ Pausa manual de Spotify — mute cancelado (pos=$position/$length)")
                 }
@@ -99,6 +133,10 @@ class AudioService : Service() {
             }
 
             if (id.startsWith("spotify:track:")) {
+                // La "siguiente canción" llegó dentro de la ventana: era una
+                // transición normal, no un anuncio. Restaurar volumen y seguir
+                // el flujo normal.
+                cancelPendingMute()
                 if (isMuted) {
                     if (localPlayer.isActive()) {
                         Log.d("Swapifi", "⏸ Tu canción sigue sonando — pausando Spotify de nuevo")
@@ -132,12 +170,24 @@ class AudioService : Service() {
                 if (capturedB > 0) spotifyMusicVolume = capturedB
                 Log.d("Swapifi", "🟢 Canción | Tiempo restante: ${timeLeft}ms | B capturado: $spotifyMusicVolume")
 
-                handler.postDelayed(muteRunnable, timeLeft)
+                handler.postDelayed(muteRunnable, timeLeft + MUTE_MARGIN_MS)
 
-            } else if (id.startsWith("spotify:ad:") || id.isEmpty()) {
+            } else if (id.startsWith("spotify:ad:")) {
                 swapifi.app.state.PlayerState.isSpotifyPlaying.value = false
                 Log.d("Swapifi", "🔴 Anuncio — manteniendo silencio")
+                handler.removeCallbacks(muteRunnable)
+                // Limpiar la ventana sin restaurar volumen: mute() vuelve a
+                // dejar el stream a 0 y una restauración intermedia haría
+                // sonar el anuncio un instante.
+                handler.removeCallbacks(confirmAdRunnable)
+                pendingAdConfirmation = false
                 if (!isMuted) mute()
+            } else if (id.isEmpty()) {
+                // id vacío es ambiguo (puede venir de metadatos incompletos en
+                // cualquiera de los tres broadcasts): en vez de mute inmediato,
+                // pasa por la ventana de confirmación.
+                Log.d("Swapifi", "🟠 id vacío — posible anuncio, ventana de confirmación")
+                if (!isMuted) startPendingMute()
             }
         }
     }
@@ -311,6 +361,9 @@ class AudioService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacksAndMessages(null)
+        // Si el servicio muere con la ventana abierta, el volumen de Spotify
+        // quedaría atascado en 0.
+        cancelPendingMute()
         if (isMuted) unmute()
         mediaSession.release()
         unregisterReceiver(spotifyReceiver)
@@ -325,6 +378,7 @@ class AudioService : Service() {
         super.onTaskRemoved(rootIntent)
         Log.d("Swapifi", "🛑 App cerrada desde recientes — deteniendo todo")
         handler.removeCallbacksAndMessages(null)
+        cancelPendingMute()
         if (isMuted) unmute()
         localPlayer.stop()
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -339,7 +393,11 @@ class AudioService : Service() {
                 val currentMusic = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
                 val currentAlarm = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
 
-                if (!isMuted) {
+                // Durante la ventana de confirmación el 0 escrito por
+                // startPendingMute() dispararía este onChange y corrompería B
+                // a 0: la música local sonaría a volumen 0 y la restauración
+                // devolvería 0.
+                if (!isMuted && !pendingAdConfirmation) {
                     if (currentMusic != spotifyMusicVolume) {
                         spotifyMusicVolume = currentMusic
                         Log.d("Swapifi", "📊 B actualizado: $spotifyMusicVolume")
@@ -408,6 +466,30 @@ class AudioService : Service() {
             }
         }
         return songs
+    }
+
+    // Fase 1: baja Spotify a 0 (barato y reversible al instante) pero NO
+    // arranca la música local todavía. Si era una transición normal, el
+    // broadcast de la siguiente canción cancela esto y el usuario solo nota un
+    // micro-bajón de volumen en el borde de la canción (que suele acabar en
+    // silencio de todos modos). Solo toca STREAM_MUSIC, nunca STREAM_ALARM,
+    // así que no interactúa con el debounce de eco del volumen A.
+    private fun startPendingMute() {
+        if (isMuted || pendingAdConfirmation) return
+        pendingAdConfirmation = true
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0)
+        handler.postDelayed(confirmAdRunnable, AD_CONFIRM_WINDOW_MS)
+        Log.d("Swapifi", "🟠 Ventana de confirmación abierta (${AD_CONFIRM_WINDOW_MS}ms) | B: $spotifyMusicVolume")
+    }
+
+    // Falsa alarma o abandono: cierra la ventana y devuelve a Spotify su
+    // volumen. No-op si no había ventana abierta.
+    private fun cancelPendingMute() {
+        if (!pendingAdConfirmation) return
+        handler.removeCallbacks(confirmAdRunnable)
+        pendingAdConfirmation = false
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, spotifyMusicVolume, 0)
+        Log.d("Swapifi", "🟠 Ventana cerrada — volumen de Spotify restaurado: $spotifyMusicVolume")
     }
 
     private fun mute() {

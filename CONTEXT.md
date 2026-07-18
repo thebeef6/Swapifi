@@ -7,7 +7,8 @@ Swapifi detecta los anuncios de Spotify y reproduce música local del usuario mi
 
 ### Detección de anuncios
 - Escucha broadcasts locales de Spotify (`com.spotify.music.playbackstatechanged`, `metadatachanged`, `queuechanged`) sin usar la API oficial
-- Calcula el tiempo restante de la canción (`length - playbackPosition`) y programa un temporizador para silenciar al final
+- Calcula el tiempo restante de la canción (`length - playbackPosition`) y programa un temporizador (con un pequeño margen tras el final previsto) para silenciar al final
+- Mute en dos fases con ventana de confirmación (~1,3 s): al dispararse el temporizador solo se baja Spotify a 0; si el broadcast de la siguiente canción llega dentro de la ventana era una transición normal (se restaura el volumen, sin música local), y si no llega se confirma el anuncio y arranca la música local. Evita falsos positivos cuando el broadcast de la siguiente canción llega tarde
 - No usa polling ni API de Spotify, solo eventos del sistema Android
 - El manifest declara `<queries>` para `com.spotify.music`: sin ello, Android 11+ bloquea silenciosamente los `sendOrderedBroadcast` de los comandos PLAY/PAUSE
 
