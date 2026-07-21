@@ -45,6 +45,23 @@ class AudioService : Service() {
         // siguiente canción en <1 s normalmente; si no llega en este margen,
         // era un anuncio de verdad.
         private const val AD_CONFIRM_WINDOW_MS = 1300L
+
+        // Reintento tras restaurar A: el sistema a veces empuja el volumen de
+        // alarma mientras el stream aún se está desactivando; con el stream ya
+        // parado del todo, una segunda escritura sí se mantiene (ver
+        // alarmReassertRunnable).
+        private const val ALARM_REASSERT_DELAY_MS = 1500L
+        // Ventana de eco de nuestras propias escrituras de alarma. DEBE cubrir más
+        // allá de ALARM_REASSERT_DELAY_MS: si terminara antes (como ocurría con un
+        // valor fijo de 1000ms < 1500ms de reintento), un empujón del sistema en esa
+        // brecha se leía como un cambio genuino del usuario y corrompía A de forma
+        // permanente y acumulativa ciclo a ciclo (bug confirmado — ver CONTEXT.md,
+        // "Compensación de volumen en auriculares Bluetooth"). Se deriva del
+        // reintento en vez de fijarse por separado, precisamente para que esta
+        // brecha no pueda reabrirse si alguno de los dos valores cambia sin el otro.
+        // +500ms de margen para la latencia/jitter del propio reintento y de la
+        // entrega del broadcast.
+        private const val ALARM_ECHO_GUARD_MS = ALARM_REASSERT_DELAY_MS + 500L
     }
 
     private var isMuted = false
@@ -208,14 +225,20 @@ class AudioService : Service() {
             // ese eco llegaría aquí como si fuera un cambio del usuario,
             // corrompiendo A. Los eventos de esa ventana se ignoran; el reintento
             // diferido se encarga de volver a imponer A después.
-            if (android.os.SystemClock.elapsedRealtime() - lastOwnAlarmWriteAt < 1000) {
+            if (android.os.SystemClock.elapsedRealtime() - lastOwnAlarmWriteAt < ALARM_ECHO_GUARD_MS) {
                 Log.d("Swapifi", "📊 Eco de escritura propia ignorado (alarma=$value)")
                 return
             }
             // Con Spotify sonando, el volumen de alarma que fija el usuario pasa
             // a ser el que se restaura al volver de la música local (A). Durante
             // el silenciado los cambios van a C via ContentObserver, como antes.
-            if (!isMuted && value != originalAlarmVolume) {
+            // localPlayer.isActive() cubre también la reproducción manual (fuera
+            // de un anuncio): LocalPlayer escribe STREAM_ALARM por su cuenta
+            // mientras suena por BT (maybeTeachBtAlarmBaseline, Fix B) y esa
+            // escritura genera un VOLUME_CHANGED_ACTION real e indistinguible de
+            // un cambio del usuario — sin este guard, A se corrompía al valor
+            // que LocalPlayer usa para "enseñar" la curva BT.
+            if (!isMuted && !localPlayer.isActive() && value != originalAlarmVolume) {
                 originalAlarmVolume = value
                 Log.d("Swapifi", "📊 A actualizado: $originalAlarmVolume")
             }
@@ -619,7 +642,7 @@ class AudioService : Service() {
         userAlarmVolumeWhileLocal = null
 
         handler.removeCallbacks(alarmReassertRunnable)
-        handler.postDelayed(alarmReassertRunnable, 1500)
+        handler.postDelayed(alarmReassertRunnable, ALARM_REASSERT_DELAY_MS)
 
         Log.d("Swapifi", "🟢 Restaurando | Música: $newMusicVolume | Alarma: $originalAlarmVolume")
     }

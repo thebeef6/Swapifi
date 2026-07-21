@@ -4,8 +4,10 @@ import android.content.Context
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.media.audiofx.DynamicsProcessing
 import android.media.audiofx.LoudnessEnhancer
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -19,6 +21,12 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 class LocalPlayer(private val context: Context) {
+
+    companion object {
+        // Margen para que el track termine su migración de hilo de salida (en
+        // los logs tarda ~200ms) antes de recrear el efecto de ganancia.
+        private const val EFFECT_REATTACH_DELAY_MS = 800L
+    }
 
     private var player: ExoPlayer? = null
     private var deviceCallbackRegistered = false
@@ -47,15 +55,18 @@ class LocalPlayer(private val context: Context) {
     // no se lucha contra él: se LEE (persistido en Settings.System como
     // "volume_alarm_bt_a2dp"), se convierte a dB con getStreamVolumeDb() y se
     // COMPENSA digitalmente para igualar la sonoridad que tendría Spotify a la
-    // fracción pedida: player.volume si hay que atenuar, LoudnessEnhancer (boost
-    // en mB sobre la sesión de audio) si hay que amplificar.
+    // fracción pedida: player.volume si hay que atenuar, LoudnessEnhancer
+    // (boost en mB sobre la sesión de audio) si hay que amplificar, con
+    // DynamicsProcessing como plan B — ver createGainEffect.
     //
     // En el altavoz (sin dispositivo preferido) el índice sí lo controla la app
     // (AudioService lo escribe en mute()) y el sistema ya atenúa con él, así que
     // player.volume queda en 1.0 y no se duplica la atenuación.
     private var desiredFraction = 1f
     private var currentOutputType: Int? = null
+    private var dynamicsProcessing: DynamicsProcessing? = null
     private var loudnessEnhancer: LoudnessEnhancer? = null
+    private var currentAudioSessionId: Int? = null
 
     // Último índice de STREAM_ALARM visto (escrito por la app o adoptado de los
     // botones físicos). Sirve para detectar en progressRunnable un cambio hecho
@@ -66,6 +77,18 @@ class LocalPlayer(private val context: Context) {
     // slider de alarma con los auriculares puestos, el boost debe recalibrarse
     // en vivo (la atenuación del sistema cambia con ese índice).
     private var lastBtAlarmSetting: Int? = null
+
+    // Fix B (ABANDONADO — ver CONTEXT.md, "Compensación de volumen en
+    // auriculares Bluetooth", para el historial completo de intentos). Se
+    // probó re-escribir STREAM_ALARM (con y sin transición forzada, con y sin
+    // FLAG_SHOW_UI) y escribir volume_alarm_bt_a2dp directamente vía
+    // Settings.System.putInt: esta última lanza "You cannot keep your
+    // settings in the secure settings" — esa clave vive en Settings.Secure,
+    // no en System, así que WRITE_SETTINGS nunca fue el permiso correcto y la
+    // escritura no puede funcionar en ningún dispositivo (no es un problema
+    // de hardware concreto). Escribirla de verdad requeriría
+    // WRITE_SECURE_SETTINGS, que un usuario normal no puede conceder (solo
+    // vía `adb shell pm grant`), así que no es una vía viable para la app.
 
     private fun getAlarmVolumeFraction(): Float {
         val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
@@ -99,6 +122,7 @@ class LocalPlayer(private val context: Context) {
         player?.setPreferredAudioDevice(preferred)
         currentOutputType = preferred?.type
         applyGain(desiredFraction)
+        scheduleEffectReattach()
         Log.d("Swapifi", "🔈 Dispositivo de salida preferido: ${preferred?.type ?: "por defecto (altavoz)"}")
     }
 
@@ -154,30 +178,99 @@ class LocalPlayer(private val context: Context) {
         }
     }
 
+    private fun releaseGainEffects() {
+        dynamicsProcessing?.release()
+        dynamicsProcessing = null
+        loudnessEnhancer?.release()
+        loudnessEnhancer = null
+    }
+
+    // El efecto se crea al llegar el id de sesión, pero el track migra al hilo
+    // de salida A2DP ~200ms después (consecuencia de setPreferredAudioDevice) y
+    // el AudioFlinger de MIUI pierde el efecto en esa mudanza: comprobado con
+    // `dumpsys media.audio_flinger` (2026-07-21) — el track sonaba con −30dB y
+    // la cadena de efectos de su sesión no existía pese a crearse sin error.
+    // Recrear el efecto con el track ya asentado lo engancha al hilo correcto;
+    // también hay que hacerlo en cada cambio de dispositivo de salida, porque
+    // cada cambio vuelve a migrar el track.
+    private val effectReattachRunnable = Runnable {
+        val sessionId = currentAudioSessionId ?: return@Runnable
+        if (player != null) createGainEffect(sessionId, allowRetry = false)
+    }
+
+    private fun scheduleEffectReattach() {
+        if (currentAudioSessionId == null) return
+        handler.removeCallbacks(effectReattachRunnable)
+        handler.postDelayed(effectReattachRunnable, EFFECT_REATTACH_DELAY_MS)
+    }
+
+    // El boost se aplica con LoudnessEnhancer: validado por oído a +28dB
+    // (2026-07-21) — su limitador interno no degrada el sonido de forma
+    // apreciable a estos niveles (la teoría de que "comprimía/aplanaba" era
+    // falsa: lo que se oía plano era la atenuación BT sin ningún efecto
+    // creado). DynamicsProcessing (solo ganancia de entrada, sin limitador)
+    // queda como plan B si LE falla al crearse; en el dispositivo de prueba su
+    // creación falla con "bad parameter value", así que es un camino sin
+    // validar — no ascenderlo a principal sin comprobarlo en dispositivo.
+    //
     // En algunos MIUI con efectos globales (Dolby, etc.) la creación del efecto
     // falla de forma transitoria; sin él no hay boost posible en BT, así que se
     // reintenta una vez con margen antes de rendirse.
-    private fun createLoudnessEnhancer(audioSessionId: Int, allowRetry: Boolean) {
-        loudnessEnhancer?.release()
+    private fun createGainEffect(audioSessionId: Int, allowRetry: Boolean) {
+        releaseGainEffects()
         loudnessEnhancer = try {
             LoudnessEnhancer(audioSessionId)
         } catch (e: Exception) {
-            Log.w(
-                "Swapifi",
-                "⚠ No se pudo crear LoudnessEnhancer: ${e.message}" +
-                    if (allowRetry) " — reintentando en 500 ms" else " — sin boost en esta sesión"
-            )
+            Log.w("Swapifi", "⚠ No se pudo crear LoudnessEnhancer: ${e.message} — probando DynamicsProcessing")
+            null
+        }
+        if (loudnessEnhancer != null) {
+            Log.d("Swapifi", "🎛 LoudnessEnhancer creado (sesión $audioSessionId)")
+        } else if (Build.VERSION.SDK_INT >= 28) {
+            dynamicsProcessing = try {
+                val config = DynamicsProcessing.Config.Builder(
+                    DynamicsProcessing.VARIANT_FAVOR_TIME_RESOLUTION,
+                    2,        // canales; con pistas mono el motor adapta la config
+                    false, 0, // pre-EQ
+                    false, 0, // compresor multibanda
+                    false, 0, // post-EQ
+                    false     // limitador
+                ).build()
+                DynamicsProcessing(0, audioSessionId, config)
+            } catch (e: Exception) {
+                Log.w("Swapifi", "⚠ No se pudo crear DynamicsProcessing: ${e.message}")
+                null
+            }
+            if (dynamicsProcessing != null) {
+                Log.d("Swapifi", "🎛 DynamicsProcessing creado (sesión $audioSessionId)")
+            }
+        }
+        if (loudnessEnhancer == null && dynamicsProcessing == null) {
+            Log.w("Swapifi", if (allowRetry) "⚠ Sin efecto de ganancia — reintentando en 500 ms" else "⚠ Sin boost en esta sesión")
             if (allowRetry) {
                 handler.postDelayed({
-                    if (player != null) createLoudnessEnhancer(audioSessionId, allowRetry = false)
+                    if (player != null) createGainEffect(audioSessionId, allowRetry = false)
                 }, 500)
             }
-            null
         }
         applyGain(desiredFraction)
     }
 
-    private fun setEnhancerGainMb(mB: Int) {
+    private fun setBoostMb(mB: Int) {
+        if (Build.VERSION.SDK_INT >= 28) dynamicsProcessing?.let { dp ->
+            try {
+                if (mB > 0) {
+                    dp.setInputGainAllChannelsTo(mB / 100f)
+                    dp.enabled = true
+                } else {
+                    dp.setInputGainAllChannelsTo(0f)
+                    dp.enabled = false
+                }
+                return
+            } catch (e: Exception) {
+                Log.d("Swapifi", "⚠ DynamicsProcessing falló: ${e.message}")
+            }
+        }
         val le = loudnessEnhancer ?: return
         try {
             if (mB > 0) {
@@ -196,7 +289,7 @@ class LocalPlayer(private val context: Context) {
         val p = player ?: return
         desiredFraction = fraction
         if (fraction <= 0f) {
-            setEnhancerGainMb(0)
+            setBoostMb(0)
             p.volume = 0f
             return
         }
@@ -207,21 +300,20 @@ class LocalPlayer(private val context: Context) {
                 val deltaDb = desiredDb - attDb
                 var boostMb = 0
                 if (deltaDb <= 0f) {
-                    setEnhancerGainMb(0)
+                    setBoostMb(0)
                     p.volume = 10f.pow(deltaDb / 20f).coerceIn(0f, 1f)
                 } else {
                     // Amplificar por encima de la atenuación fija del sistema:
-                    // solo el LoudnessEnhancer puede ganar >1.0. Tope de +36 dB;
-                    // su limitador comprime la dinámica con boosts así, pero
-                    // audible-y-comprimido gana a inaudible (aquí el sistema
-                    // mete −39 dB que no podemos quitar de otra forma).
+                    // solo un efecto de sesión puede ganar >1.0. Tope de +36 dB
+                    // (el técnico del LoudnessEnhancer; validado por oído que a
+                    // +28dB suena bien).
                     p.volume = 1f
                     val wantedMb = (deltaDb * 100).roundToInt()
                     boostMb = wantedMb.coerceAtMost(3600)
                     if (wantedMb > boostMb) {
                         Log.w("Swapifi", "⚠ Boost capado a +36dB: faltan ${(wantedMb - boostMb) / 100f}dB para igualar a Spotify")
                     }
-                    setEnhancerGainMb(boostMb)
+                    setBoostMb(boostMb)
                 }
                 Log.d(
                     "Swapifi",
@@ -237,12 +329,12 @@ class LocalPlayer(private val context: Context) {
             // digital: no iguala a Spotify pero evita el caso peor.
             Log.w("Swapifi", "⚠ Sin datos de curva BT (att=$attDb, obj=$desiredDb) — boost fijo de emergencia +12dB")
             p.volume = fraction
-            setEnhancerGainMb(1200)
+            setBoostMb(1200)
             return
         }
         // Altavoz (o sin datos de compensación): el índice de STREAM_ALARM que
         // escribió AudioService ya atenúa; no duplicar con player.volume.
-        setEnhancerGainMb(0)
+        setBoostMb(0)
         p.volume = 1f
     }
 
@@ -306,16 +398,27 @@ class LocalPlayer(private val context: Context) {
                     }
                 }
 
-                // El LoudnessEnhancer se ata a la sesión de audio, que ExoPlayer
-                // asigna al inicializar el sink; hasta entonces no existe y el
-                // boost no puede aplicarse — por eso se (re)crea aquí.
+                // Media3 genera el id de sesión al CONSTRUIR el player (se lee
+                // abajo con player.audioSessionId); este callback ya no se
+                // dispara en el arranque — comprobado en logcat 2026-07-21:
+                // confiar solo en él dejaba la app sin efecto de ganancia
+                // (ningún boost real, de ahí el volumen plano en BT). Se
+                // mantiene por si el id cambia a mitad de reproducción.
                 override fun onAudioSessionIdChanged(audioSessionId: Int) {
-                    createLoudnessEnhancer(audioSessionId, allowRetry = true)
+                    currentAudioSessionId = audioSessionId
+                    createGainEffect(audioSessionId, allowRetry = true)
+                    scheduleEffectReattach()
                 }
             })
             it.setMediaItem(MediaItem.fromUri(uri))
             it.prepare()
             it.play()
+            val sessionId = it.audioSessionId
+            if (sessionId != C.AUDIO_SESSION_ID_UNSET) {
+                currentAudioSessionId = sessionId
+                createGainEffect(sessionId, allowRetry = true)
+                scheduleEffectReattach()
+            }
             Log.d("Swapifi", "🎵 Reproduciendo audio local: $uri")
             Log.d("Swapifi", "🔊 Fracción pedida: $volume | STREAM_ALARM actual: ${audioManager.getStreamVolume(AudioManager.STREAM_ALARM)}")
         }
@@ -342,12 +445,13 @@ class LocalPlayer(private val context: Context) {
 
     fun stop() {
         handler.removeCallbacks(progressRunnable)
+        handler.removeCallbacks(effectReattachRunnable)
+        currentAudioSessionId = null
         if (deviceCallbackRegistered) {
             audioManager.unregisterAudioDeviceCallback(audioDeviceCallback)
             deviceCallbackRegistered = false
         }
-        loudnessEnhancer?.release()
-        loudnessEnhancer = null
+        releaseGainEffects()
         player?.stop()
         player?.release()
         player = null
