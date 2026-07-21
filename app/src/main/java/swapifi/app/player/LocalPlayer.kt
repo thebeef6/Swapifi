@@ -133,7 +133,7 @@ class LocalPlayer(private val context: Context) {
     // volumen de alarma con el BT conectado; si falta, se estima con el índice
     // de alarma visible — compensar con una estimación gana a no compensar.
     private fun btAlarmAttenuationDb(): Float? {
-        if (android.os.Build.VERSION.SDK_INT < 28) {
+        if (Build.VERSION.SDK_INT < 28) {
             Log.w("Swapifi", "⚠ API < 28: sin getStreamVolumeDb, no se puede medir la atenuación BT")
             return null
         }
@@ -166,7 +166,7 @@ class LocalPlayer(private val context: Context) {
     // dB al que sonaría Spotify (stream de música) en el BT a esta fracción:
     // es la sonoridad que la música local debe igualar.
     private fun desiredMusicDb(fraction: Float): Float? {
-        if (android.os.Build.VERSION.SDK_INT < 28) return null
+        if (Build.VERSION.SDK_INT < 28) return null
         val maxMusic = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         if (maxMusic <= 0) return null
         val idx = (fraction * maxMusic).roundToInt().coerceIn(1, maxMusic)
@@ -342,8 +342,8 @@ class LocalPlayer(private val context: Context) {
     private val progressRunnable = object : Runnable {
         override fun run() {
             player?.let {
-                currentPosition.value = it.currentPosition
-                duration.value = it.duration.coerceAtLeast(0)
+                currentPosition.longValue = it.currentPosition
+                duration.longValue = it.duration.coerceAtLeast(0)
                 // Si los botones físicos mueven STREAM_ALARM (en BT ese índice es
                 // el del altavoz — audiblemente inerte, pero sirve de superficie
                 // de control), adoptamos la nueva fracción y reaplicamos ganancia.
@@ -351,7 +351,7 @@ class LocalPlayer(private val context: Context) {
                 if (alarmIndex != lastAlarmIndex) {
                     lastAlarmIndex = alarmIndex
                     val streamFraction = getAlarmVolumeFraction()
-                    localVolume.value = streamFraction
+                    localVolume.floatValue = streamFraction
                     applyGain(streamFraction)
                 }
                 // El índice de alarma del dispositivo BT puede cambiar sin tocar
@@ -373,6 +373,10 @@ class LocalPlayer(private val context: Context) {
         }
     }
 
+    // audioSessionId y AUDIO_SESSION_ID_UNSET están @UnstableApi en Media3; se
+    // acepta explícitamente porque leer el id al construir es la única vía
+    // fiable de crear el efecto de ganancia (ver onAudioSessionIdChanged).
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     fun play(uri: Uri, volume: Float) {
         stop()
         val audioAttributes = AudioAttributes.Builder()
@@ -384,7 +388,7 @@ class LocalPlayer(private val context: Context) {
             it.setAudioAttributes(audioAttributes, false)
             val fraction = volume.coerceIn(0f, 1f)
             desiredFraction = fraction
-            localVolume.value = fraction
+            localVolume.floatValue = fraction
             // Partimos del índice actual para que el primer tick del bucle no
             // pise el volumen inicial.
             lastAlarmIndex = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
@@ -404,6 +408,7 @@ class LocalPlayer(private val context: Context) {
                 // confiar solo en él dejaba la app sin efecto de ganancia
                 // (ningún boost real, de ahí el volumen plano en BT). Se
                 // mantiene por si el id cambia a mitad de reproducción.
+                @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
                 override fun onAudioSessionIdChanged(audioSessionId: Int) {
                     currentAudioSessionId = audioSessionId
                     createGainEffect(audioSessionId, allowRetry = true)
@@ -455,8 +460,8 @@ class LocalPlayer(private val context: Context) {
         player?.stop()
         player?.release()
         player = null
-        currentPosition.value = 0L
-        duration.value = 0L
+        currentPosition.longValue = 0L
+        duration.longValue = 0L
         Log.d("Swapifi", "⏹ Audio local detenido")
     }
 
