@@ -7,10 +7,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.stringResource
 import swapifi.app.R
+
 @Composable
-fun HelpPopup(onDismiss: () -> Unit) {
+fun SetupHelpPopup(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -30,6 +30,33 @@ fun HelpPopup(onDismiss: () -> Unit) {
                 Text(stringResource(R.string.help_step3))
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(stringResource(R.string.help_step4))
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.understood))
+            }
+        }
+    )
+}
+
+@Composable
+fun HowItWorksPopup(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.how_title),
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text(stringResource(R.string.how_point1))
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(stringResource(R.string.how_point2))
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(stringResource(R.string.how_point3))
             }
         },
         confirmButton = {

@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -57,6 +58,7 @@ fun getAudioFiles(context: Context, folder: String): List<AudioFile> {
 fun FileExplorerSection() {
     val context = LocalContext.current
     var songs by remember { mutableStateOf<List<AudioFile>>(emptyList()) }
+    var showFolderPicker by remember { mutableStateOf(false) }
     val permissionGranted = swapifi.app.state.PlayerState.permissionGranted.value
     val selectedFolder = swapifi.app.state.PlayerState.selectedFolder.value
 
@@ -71,14 +73,25 @@ fun FileExplorerSection() {
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = if (selectedFolder.isEmpty())
-                    stringResource(R.string.your_music)
-                else
-                    selectedFolder.substringAfterLast("/"),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { showFolderPicker = true },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (selectedFolder.isEmpty())
+                        stringResource(R.string.your_music)
+                    else
+                        selectedFolder.substringAfterLast("/"),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Icon(
+                    Icons.Default.ArrowDropDown,
+                    contentDescription = stringResource(R.string.settings_change_folder)
+                )
+            }
         }
 
         val selectionEnabled = !swapifi.app.state.PlayerState.isSpotifyPlaying.value
@@ -145,5 +158,15 @@ fun FileExplorerSection() {
                 }
             }
         }
+    }
+
+    if (showFolderPicker) {
+        FolderPickerPopup(
+            onDismiss = { showFolderPicker = false },
+            onFolderSelected = { folder ->
+                swapifi.app.state.PlayerState.setSelectedFolder(context, folder)
+                showFolderPicker = false
+            }
+        )
     }
 }

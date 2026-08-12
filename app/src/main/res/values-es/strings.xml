@@ -2,7 +2,6 @@
     <string name="app_name">Swapifi</string>
 
     <!-- TopBar -->
-    <string name="menu_settings">Ajustes</string>
     <string name="menu_report_bug">Reportar un bug</string>
     <string name="menu_contact">Contacto</string>
     <string name="menu_about">Acerca de</string>
@@ -23,18 +22,21 @@
     <string name="close">Cerrar</string>
 
     <!-- Help -->
+    <string name="help_menu_setup">Cómo configurarlo</string>
+    <string name="help_menu_how_it_works">Cómo funciona</string>
     <string name="help_title">Configura Swapifi</string>
     <string name="help_intro">Para que Swapifi funcione correctamente, sigue estos pasos:</string>
     <string name="help_step1">1. Concede el permiso de música y audio y el de notificaciones cuando se soliciten</string>
     <string name="help_step2">2. Desactiva la optimización de batería para Swapifi en los ajustes del sistema</string>
     <string name="help_step3">3. Mantén Swapifi abierta en segundo plano mientras usas Spotify</string>
-    <string name="help_step4">4. Mientras suena tu música local, puedes subir o bajar su volumen con el volumen de alarma (los botones de volumen del móvil)</string>
+    <string name="help_step4">4. Para cambiar la carpeta de tu música local, toca el nombre de la carpeta que aparece encima de las canciones</string>
     <string name="understood">Entendido</string>
+    <string name="how_title">Cómo funciona Swapifi</string>
+    <string name="how_point1">• Cuando Spotify pone un anuncio, Swapifi lo silencia y reproduce tu música local</string>
+    <string name="how_point2">• Al terminar el anuncio, Spotify vuelve a sonar automáticamente</string>
+    <string name="how_point3">• Mientras suena tu música local, ajusta su volumen con el volumen de alarma del móvil</string>
 
-    <!-- Settings -->
-    <string name="settings_title">Ajustes</string>
-    <string name="settings_music_folder">Carpeta de música</string>
-    <string name="settings_music_folder_default">Todas las carpetas</string>
+    <!-- Folder -->
     <string name="settings_change_folder">Cambiar carpeta</string>
 
     <!-- Bug Report -->

@@ -18,10 +18,11 @@ import swapifi.app.R
 @Composable
 fun SwapifiTopBar(
     onDonateClick: () -> Unit = {},
-    onHelpClick: () -> Unit = {}
+    onSetupHelpClick: () -> Unit = {},
+    onHowItWorksClick: () -> Unit = {}
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
-    var showSettings by remember { mutableStateOf(false) }
+    var helpMenuExpanded by remember { mutableStateOf(false) }
     var showBugReport by remember { mutableStateOf(false) }
     var showContact by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
@@ -50,8 +51,23 @@ fun SwapifiTopBar(
             IconButton(onClick = onDonateClick) {
                 Text("☕")
             }
-            IconButton(onClick = onHelpClick) {
-                Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = stringResource(R.string.menu_about))
+            Box {
+                IconButton(onClick = { helpMenuExpanded = true }) {
+                    Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = stringResource(R.string.help_menu_how_it_works))
+                }
+                DropdownMenu(
+                    expanded = helpMenuExpanded,
+                    onDismissRequest = { helpMenuExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.help_menu_how_it_works)) },
+                        onClick = { helpMenuExpanded = false; onHowItWorksClick() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.help_menu_setup)) },
+                        onClick = { helpMenuExpanded = false; onSetupHelpClick() }
+                    )
+                }
             }
             IconButton(onClick = { menuExpanded = true }) {
                 Icon(Icons.Default.MoreVert, contentDescription = null)
@@ -60,10 +76,6 @@ fun SwapifiTopBar(
                 expanded = menuExpanded,
                 onDismissRequest = { menuExpanded = false }
             ) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_settings)) },
-                    onClick = { menuExpanded = false; showSettings = true }
-                )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.menu_report_bug)) },
                     onClick = { menuExpanded = false; showBugReport = true }
@@ -80,7 +92,6 @@ fun SwapifiTopBar(
         }
     )
 
-    if (showSettings) SettingsPopup(onDismiss = { showSettings = false })
     if (showBugReport) BugReportPopup(onDismiss = { showBugReport = false })
     if (showContact) ContactPopup(onDismiss = { showContact = false })
     if (showAbout) AboutPopup(onDismiss = { showAbout = false })

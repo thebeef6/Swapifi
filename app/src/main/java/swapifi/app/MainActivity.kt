@@ -82,7 +82,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun SwapifiScreen() {
-    var showHelpPopup by remember { mutableStateOf(false) }
+    var showSetupHelpPopup by remember { mutableStateOf(false) }
+    var showHowItWorksPopup by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val openKofi = {
         context.startActivity(
@@ -98,7 +99,7 @@ fun SwapifiScreen() {
         val prefs = context.getSharedPreferences("Swapifi_prefs", android.content.Context.MODE_PRIVATE)
         val firstLaunch = prefs.getBoolean("first_launch", true)
         if (firstLaunch) {
-            showHelpPopup = true
+            showHowItWorksPopup = true
             prefs.edit { putBoolean("first_launch", false) }
         }
     }
@@ -107,7 +108,8 @@ fun SwapifiScreen() {
         topBar = {
             SwapifiTopBar(
                 onDonateClick = openKofi,
-                onHelpClick = { showHelpPopup = true }
+                onSetupHelpClick = { showSetupHelpPopup = true },
+                onHowItWorksClick = { showHowItWorksPopup = true }
             )
         },
         bottomBar = {
@@ -173,9 +175,14 @@ fun SwapifiScreen() {
         }
     }
 
-    if (showHelpPopup) {
-        swapifi.app.ui.HelpPopup(
-            onDismiss = { showHelpPopup = false }
+    if (showHowItWorksPopup) {
+        swapifi.app.ui.HowItWorksPopup(
+            onDismiss = { showHowItWorksPopup = false }
+        )
+    }
+    if (showSetupHelpPopup) {
+        swapifi.app.ui.SetupHelpPopup(
+            onDismiss = { showSetupHelpPopup = false }
         )
     }
 }

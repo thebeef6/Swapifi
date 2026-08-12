@@ -35,6 +35,10 @@ class LocalPlayer(private val context: Context) {
     // La duración real no se conoce hasta STATE_READY; la notificación multimedia
     // la necesita para mostrar la barra de progreso, así que avisamos entonces.
     var onReady: (() -> Unit)? = null
+    // El auricular Bluetooth se desconectó (o apagó) con la música sonando por
+    // él: sin esto la reproducción saltaría al altavoz. Quien escuche debe
+    // pausar vía PlayerState para que UI y notificación queden en sincronía.
+    var onBluetoothDisconnected: (() -> Unit)? = null
     val currentPosition = mutableLongStateOf(0L)
     val duration = mutableLongStateOf(0L)
 
@@ -119,8 +123,19 @@ class LocalPlayer(private val context: Context) {
         )
         val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
         val preferred = priorityTypes.firstNotNullOfOrNull { type -> devices.firstOrNull { it.type == type } }
+        val previousOutputType = currentOutputType
         player?.setPreferredAudioDevice(preferred)
         currentOutputType = preferred?.type
+        // Sonaba por el auricular BT y este ya no está: pausar antes de aplicar
+        // ganancias, para que no llegue a oírse por la nueva ruta (altavoz).
+        // isActive() y no isPlaying(): en BUFFERING también hay que pausar.
+        if (previousOutputType == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP &&
+            currentOutputType != AudioDeviceInfo.TYPE_BLUETOOTH_A2DP &&
+            isActive()
+        ) {
+            Log.d("Swapifi", "🎧 Auricular Bluetooth desconectado — pausando música local")
+            onBluetoothDisconnected?.invoke() ?: pause()
+        }
         applyGain(desiredFraction)
         scheduleEffectReattach()
         Log.d("Swapifi", "🔈 Dispositivo de salida preferido: ${preferred?.type ?: "por defecto (altavoz)"}")
