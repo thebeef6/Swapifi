@@ -282,6 +282,14 @@ class AudioService : Service() {
             updateMediaNotification()
         }
 
+        // Al desconectarse (o apagarse) el auricular BT con música local
+        // sonando, se pausa en vez de dejar que salte al altavoz. Se enruta por
+        // PlayerState.pause() → onPauseRequested para que isPlayingLocal y la
+        // notificación multimedia reflejen la pausa, igual que el botón ⏸.
+        localPlayer.onBluetoothDisconnected = {
+            swapifi.app.state.PlayerState.pause()
+        }
+
         swapifi.app.state.PlayerState.onPlayRequested = { file ->
             val uri = android.net.Uri.fromFile(file)
             // Reproducción manual (next/previous/resume): aquí no hay un mute()
