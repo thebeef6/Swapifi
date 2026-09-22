@@ -15,7 +15,7 @@ object RawMusicExporter {
         swapifi.app.R.raw.two_things to "Two Things - Anno Domini Beats.mp3"
     )
 
-    fun exportIfNeeded(context: Context) {
+    fun exportIfNeeded(context: Context, onScanComplete: () -> Unit = {}) {
         val SwapifiFolder = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),
             "Swapifi"
@@ -49,12 +49,22 @@ object RawMusicExporter {
 
         // Notificar a MediaStore de todos los archivos nuevos a la vez
         if (filesToScan.isNotEmpty()) {
+            // scanFile invoca el callback una vez por cada ruta escaneada; solo
+            // avisamos a onScanComplete cuando MediaStore ha confirmado las
+            // tres, para que quien recargue la lista la vea completa.
+            val pending = java.util.concurrent.atomic.AtomicInteger(filesToScan.size)
             MediaScannerConnection.scanFile(
                 context,
                 filesToScan.toTypedArray(),
-                filesToScan.map { "audio/mpeg" }.toTypedArray(),
-                { path, uri -> Log.d("Swapifi", "📱 MediaStore indexado: $path") }
-            )
+                filesToScan.map { "audio/mpeg" }.toTypedArray()
+            ) { path, uri ->
+                Log.d("Swapifi", "📱 MediaStore indexado: $path")
+                if (pending.decrementAndGet() == 0) {
+                    onScanComplete()
+                }
+            }
+        } else {
+            onScanComplete()
         }
     }
 }

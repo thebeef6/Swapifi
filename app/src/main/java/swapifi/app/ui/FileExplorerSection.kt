@@ -61,8 +61,13 @@ fun FileExplorerSection() {
     var showFolderPicker by remember { mutableStateOf(false) }
     val permissionGranted = swapifi.app.state.PlayerState.permissionGranted.value
     val selectedFolder = swapifi.app.state.PlayerState.selectedFolder.value
+    val mediaScanTick = swapifi.app.state.PlayerState.mediaScanTick.intValue
 
-    LaunchedEffect(permissionGranted, selectedFolder) {
+    // mediaScanTick como key: la primera vez que se concede el permiso, el
+    // escaneo de MediaStore (RawMusicExporter) termina en segundo plano y
+    // puede llegar bastante después de permissionGranted; sin esta key la
+    // lista se cargaría vacía hasta cerrar y reabrir la app.
+    LaunchedEffect(permissionGranted, selectedFolder, mediaScanTick) {
         songs = getAudioFiles(context, selectedFolder)
     }
 

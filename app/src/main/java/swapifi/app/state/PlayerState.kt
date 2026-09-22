@@ -21,6 +21,17 @@ object PlayerState {
     var localDuration = androidx.compose.runtime.mutableLongStateOf(0L)
     var localPlayerRef: swapifi.app.player.LocalPlayer? = null
     var isSpotifyPlaying = androidx.compose.runtime.mutableStateOf(false)
+
+    // Se incrementa cada vez que RawMusicExporter confirma que MediaScannerConnection
+    // ha terminado de indexar las canciones raw; quien liste canciones de MediaStore
+    // debe usar este valor como key de recarga (el escaneo es asíncrono y puede
+    // terminar bastante después de conceder el permiso).
+    var mediaScanTick = androidx.compose.runtime.mutableIntStateOf(0)
+
+    fun notifyMediaScanned() {
+        mediaScanTick.intValue++
+    }
+
     fun setPlaylist(files: List<File>, startIndex: Int = 0) {
         playlist = files
         currentIndex = startIndex

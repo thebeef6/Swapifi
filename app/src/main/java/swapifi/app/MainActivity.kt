@@ -42,7 +42,9 @@ class MainActivity : ComponentActivity() {
     ) { results ->
         if (results[audioPermission] == true) {
             swapifi.app.state.PlayerState.permissionGranted.value = true
-            swapifi.app.utils.RawMusicExporter.exportIfNeeded(this)
+            swapifi.app.utils.RawMusicExporter.exportIfNeeded(this) {
+                swapifi.app.state.PlayerState.notifyMediaScanned()
+            }
         }
     }
 
@@ -56,7 +58,9 @@ class MainActivity : ComponentActivity() {
                 android.content.pm.PackageManager.PERMISSION_GRANTED
 
         if (granted(audioPermission)) {
-            swapifi.app.utils.RawMusicExporter.exportIfNeeded(this)
+            swapifi.app.utils.RawMusicExporter.exportIfNeeded(this) {
+                swapifi.app.state.PlayerState.notifyMediaScanned()
+            }
         }
 
         // Además del permiso de audio, desde Android 13 las notificaciones (la
