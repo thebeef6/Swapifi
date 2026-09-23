@@ -31,6 +31,9 @@
     <string name="help_step3">3. Mantén Swapifi abierta en segundo plano mientras usas Spotify</string>
     <string name="help_step4">4. Para cambiar la carpeta de tu música local, toca el nombre de la carpeta que aparece encima de las canciones</string>
     <string name="understood">Entendido</string>
+    <string name="open_app_settings">Abrir permisos de la app</string>
+    <string name="hands_off_hint">No es necesario que hagas nada aquí. Abre Spotify y Swapifi eliminará los anuncios automáticamente.</string>
+    <string name="dismiss">Cerrar</string>
     <string name="how_title">Cómo funciona Swapifi</string>
     <string name="how_point1">• Cuando Spotify pone un anuncio, Swapifi lo silencia y reproduce tu música local</string>
     <string name="how_point2">• Al terminar el anuncio, Spotify vuelve a sonar automáticamente</string>

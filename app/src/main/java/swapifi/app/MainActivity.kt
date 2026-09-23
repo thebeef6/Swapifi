@@ -7,6 +7,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -88,7 +91,11 @@ class MainActivity : ComponentActivity() {
 fun SwapifiScreen() {
     var showSetupHelpPopup by remember { mutableStateOf(false) }
     var showHowItWorksPopup by remember { mutableStateOf(false) }
+    var showHandsOffHint by remember { mutableStateOf(true) }
     val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = remember {
+        context.getSharedPreferences("Swapifi_prefs", android.content.Context.MODE_PRIVATE)
+    }
     val openKofi = {
         context.startActivity(
             Intent(Intent.ACTION_VIEW, "https://ko-fi.com/davidig6".toUri())
@@ -100,12 +107,12 @@ fun SwapifiScreen() {
     }
 
     LaunchedEffect(Unit) {
-        val prefs = context.getSharedPreferences("Swapifi_prefs", android.content.Context.MODE_PRIVATE)
         val firstLaunch = prefs.getBoolean("first_launch", true)
         if (firstLaunch) {
             showHowItWorksPopup = true
             prefs.edit { putBoolean("first_launch", false) }
         }
+        showHandsOffHint = !prefs.getBoolean("hands_off_hint_dismissed", false)
     }
 
     Scaffold(
@@ -175,6 +182,42 @@ fun SwapifiScreen() {
                 onNext = { swapifi.app.state.PlayerState.next() },
                 onPrevious = { swapifi.app.state.PlayerState.previous() }
             )
+            if (showHandsOffHint) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                ) {
+                    Text(
+                        text = stringResource(R.string.hands_off_hint),
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 28.dp, top = 12.dp, bottom = 12.dp)
+                    )
+                    IconButton(
+                        onClick = {
+                            showHandsOffHint = false
+                            prefs.edit { putBoolean("hands_off_hint_dismissed", true) }
+                        },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .size(20.dp)
+                            .padding(top = 4.dp, end = 4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = stringResource(R.string.dismiss),
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
             FileExplorerSection()
         }
     }
